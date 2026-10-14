@@ -17,7 +17,8 @@ dan catatan kritis ada di **[docs/FORMULASI_MODEL.md](docs/FORMULASI_MODEL.md)**
 pip install -r requirements.txt
 python run_pipeline.py            # model v1 (kerangka slide), ~15 detik
 python run_engine.py              # engine v2 + protokol penerimaan, ~2 menit
-python report/make_figures.py     # 12 gambar kualitas publikasi (300 dpi)
+python audit/run_audit.py         # audit bias & efek Monte Carlo, ~9 menit
+python report/make_figures.py     # 15 gambar kualitas publikasi (300 dpi)
 python report/build_report.py     # laporan PDF teknis
 python -m pytest -q               # uji fisika & reproduksi angka slide
 ```
@@ -32,14 +33,30 @@ python -m pytest -q               # uji fisika & reproduksi angka slide
 | Sobol eksak pada ruang skor 5^6 | `landslide_risk/variance.py` |
 | 575 kasus lereng nyata (Ma et al. 2022) + pengelompokan duplikat | `landslide_risk/case_data.py` |
 | Engine hibrida (gradient boosting monoton) + CV berkelompok | `landslide_risk/engine.py` |
-| Metrik (AUC, Brier, ECE, TSS) dan 17 kriteria penerimaan | `landslide_risk/metrics.py`, `acceptance.py` |
+| Metrik (AUC, Brier, ECE, TSS) dan 19 kriteria penerimaan | `landslide_risk/metrics.py`, `acceptance.py` |
+| Pf Monte Carlo per kasus nyata (uji kalibrasi) | `landslide_risk/case_mc.py` |
+| Audit bias validasi, efek Monte Carlo, ketidakpastian skoring | `audit/run_audit.py` |
 
-Hasil: **16 dari 17 kriteria lolos** (`results/engine/acceptance.md`). Kriteria yang belum
-adalah validasi spasial pada inventaris longsor Indonesia. AUC (CV berkelompok, domain
-lereng tanah): heuristik/AHP-like 0,68, fisika saja 0,76, **hibrida 0,90**.
+Hasil (versi teraudit, analisis utama = seluruh 575 kasus, CV berkelompok):
+
+| Model | AUC |
+|---|---|
+| A Skor berbobot sama (**bukan** AHP) | 0,581 |
+| B Fisika saja (FS Bishop) | 0,645 |
+| E Regresi logistik (pembanding adil) | 0,731 |
+| **D Hibrida, monoton penuh (dipakai)** | **0,860** (CI 0,832–0,896) |
+
+Penerimaan: 16 dari 19 kriteria lolos (4 di antaranya cek desain), **1 gagal**
+(Pf Monte Carlo fisika tidak terkalibrasi sebagai probabilitas pada lereng nyata,
+ECE 0,33), **2 tertunda** (alat skoring lapangan belum divalidasi terhadap kejadian
+longsor; validasi spasial Indonesia). Lihat `docs/AUDIT.md`.
+
+> **Penggunaan:** hasil ini untuk riset dan screening, belum untuk keputusan
+> evakuasi/relokasi. Setiap hasil Kelas IV–V perlu ditinjau ahli geoteknik.
 
 Dokumen:
-- `report/Landslide_Risk_Engine_Report.pdf`: laporan teknis (konsep, fisika, gradien & matriks, engine, penerimaan)
+- `docs/AUDIT.md`: audit kesalahan, bias validasi, peran Monte Carlo dan skoring
+- `report/Landslide_Risk_Engine_Report.pdf`: laporan teknis (konsep, fisika, gradien & matriks, engine, penerimaan, audit)
 - `reports/Monte Carlo pengganti AHP longsor.md`: kajian literatur
 - `docs/FORMULASI_MODEL.md`: formulasi v1 dan kritik
 

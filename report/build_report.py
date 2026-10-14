@@ -436,7 +436,8 @@ rows = [["Gate", "Code", "Criterion", "Value", "Threshold", "Basis", "Status"]]
 hl = []
 for i, r in acc.iterrows():
     v = "–" if pd.isna(r.value) else (f"{r.value:.2e}" if abs(r.value) < 1e-3 and r.value != 0 else f"{r.value:.3f}")
-    rows.append([r.gate.split(" ", 1)[1], r.code, r.description, v, r.threshold, r.basis, r.status])
+    gate = {"Verification": "Verif.", "Numerical": "Numer.", "Validation": "Valid."}[r.gate.split(" ", 1)[1]]
+    rows.append([gate, r.code, r.description, v, r.threshold, r.basis, r.status])
     if r.status != "PASS":
         hl.append(len(rows) - 1)
 story += [P("5  Accuracy, acceptance and reliability", "h1"),
@@ -449,7 +450,7 @@ story += [P("5  Accuracy, acceptance and reliability", "h1"),
             "does not behave as a frequency on real slopes. The two pending criteria concern the tool that would actually be "
             "used in the field."),
           table(rows, f"Acceptance protocol (audited). {N_PASS} pass, {N_FAIL} fail, {N_PEND} pending; shaded rows are not passed.",
-                col_widths=[1.8 * cm, 1.0 * cm, 6.0 * cm, 1.4 * cm, 3.0 * cm, 1.7 * cm, 1.6 * cm], highlight=hl),
+                col_widths=[1.3 * cm, 1.0 * cm, 6.3 * cm, 1.5 * cm, 3.0 * cm, 1.7 * cm, 1.8 * cm], highlight=hl),
           P("<b>Site-level reliability.</b> For decisions on individual slopes a dual criterion is recommended: the SNI "
             "8460:2017 minimum factor of safety (1.5 static, 1.1 seismic for permanent slopes, cited from secondary sources "
             "and still to be confirmed against the standard) <i>and</i> a reliability index β<sub>R</sub> ≥ 3. A mean FS of 1.5 "
@@ -535,8 +536,10 @@ story += [P("7  Audit: corrected claims, validation bias, the role of Monte Carl
             f"<b>Domain choice.</b> Across 48 alternative domain filters, physics-only AUC ranges {grid['auc_physics'][0]:.2f}–"
             f"{grid['auc_physics'][1]:.2f} and the hybrid {grid['auc_hybrid'][0]:.2f}–{grid['auc_hybrid'][1]:.2f}; the filter used "
             "earlier was not the most favourable, but physics-only results are clearly sensitive to it. "
-            "<b>Leakage.</b> Random cross-validation overstates AUC by about 0.01–0.02; coarser duplicate grouping lowers "
-            "the hybrid AUC by a further ~0.01, so some near-duplicate leakage probably remains. "
+            f"<b>Leakage.</b> Random cross-validation overstates the hybrid AUC by {acc.set_index('code').loc['A6', 'value']:.3f}. "
+            f"Grouping duplicates up to eight times more coarsely leaves the constrained hybrid within "
+            f"{min(g['auc_hybrid'] for g in AUD['validation']['grouping']):.3f}–{max(g['auc_hybrid'] for g in AUD['validation']['grouping']):.3f}, "
+            "so residual near-duplicate leakage is small for the adopted model. "
             "<b>Bootstrap.</b> Resampling whole duplicate groups gives confidence intervals almost identical to case-level "
             "resampling, so interval widths are not materially understated."),
           figure("F14_validation_bias", "(a) Reported AUC depends on the estimator and on whether γ and H are constrained. "
@@ -556,7 +559,7 @@ story += [P("7  Audit: corrected claims, validation bias, the role of Monte Carl
             f"ln FS by P<sub>f</sub> in the hybrid leaves AUC unchanged ({hyb['D_hybrid']['auc_fold_mean']:.3f} versus "
             f"{hyb['D_hybrid_pfMC']['auc_fold_mean']:.3f}). Its probabilities are poorly calibrated: slopes with "
             f"P<sub>f</sub> ≤ 0.1 failed {float(cal[0]['observed']):.0%} of the time and slopes with P<sub>f</sub> &gt; 0.9 only "
-            f"{float(cal[-1]['observed']):.0%} (Figure 13a). The value of Monte Carlo is therefore transparent uncertainty "
+            f"{float(cal[-1]['observed']):.0%} (Figure 14a). The value of Monte Carlo is therefore transparent uncertainty "
             "bookkeeping and a graded output, not additional predictive accuracy; its probabilities become meaningful only "
             "after calibration against outcomes."),
           figure("F13_monte_carlo_effect", "(a) Calibration of raw Monte Carlo P<sub>f</sub> and of the hybrid engine on real "
@@ -627,7 +630,7 @@ story += bullets([
     "Add transient hydrology (Iverson/TRIGRS) with 1–3-day antecedent rainfall.",
 ])
 
-story += [P("References", "h1")]
+story += [PageBreak(), P("References", "h1")]
 refs = [
     "Brenning, A. (2005). Spatial prediction models for landslide hazards: review, comparison and evaluation. <i>Natural Hazards and Earth System Sciences</i>, 5, 853–862.",
     "Corominas, J., et al. (2014). Recommendations for the quantitative analysis of landslide risk. <i>Bulletin of Engineering Geology and the Environment</i>, 73, 209–263.",

@@ -1,5 +1,8 @@
 # Formulasi Model: Landslide Risk Index berbasis Simulasi Fisika + Monte Carlo
 
+> **Catatan (14 Okt 2026):** dokumen ini menjelaskan model v1. Beberapa klaim di sini dan di
+> laporan v2.0 telah dikoreksi oleh audit. Lihat `docs/AUDIT.md` untuk angka yang berlaku.
+
 Dokumen ini merumuskan model dari dua dek slide ("The Landslide Risk Index" dan
 "Algorithmic Landslide Risk Framework") menjadi persamaan yang bisa langsung
 diimplementasikan. Dokumen ini juga membahas pertimbangan memakai Monte Carlo
