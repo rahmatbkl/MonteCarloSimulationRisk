@@ -507,26 +507,26 @@ def fig_engine_architecture():
 # --------------------------------------------------------------------------
 # F10 Validation: ROC, reliability diagram, AUC comparison
 # --------------------------------------------------------------------------
-NAMES = {"A_heuristic": "A Heuristic (AHP-like)", "B_physics": "B Physics only",
-         "C_ml_raw": "C ML (raw)", "D_hybrid": "D Hybrid (monotone)"}
-MCOL = {"A_heuristic": MUTED, "B_physics": ORANGE, "C_ml_raw": AQUA, "D_hybrid": BLUE}
+NAMES = {"A_heuristic": "A Equal-weight score (not AHP)", "B_physics": "B Physics only",
+         "C_ml_raw": "C ML, unconstrained", "D_hybrid": "D Hybrid, fully monotone", "E_logistic": "E Logistic regression"}
+MCOL = {"A_heuristic": MUTED, "B_physics": ORANGE, "C_ml_raw": AQUA, "D_hybrid": BLUE, "E_logistic": VIOLET}
 
 
 def fig_validation():
-    oof = pd.read_csv(RES / "oof_grouped_domain.csv")
+    oof = pd.read_csv(RES / "oof_grouped_all.csv")
     y = oof.failed
     fig, axes = plt.subplots(1, 3, figsize=(7.6, 2.75))
     ax = axes[0]
-    pm = pd.read_csv(RES / "pooled_metrics_grouped_domain.csv", index_col=0)
+    pm = pd.read_csv(RES / "pooled_metrics_grouped_all.csv", index_col=0)
     for m in NAMES:
         fpr, tpr, _ = roc_curve(y, oof[m])
         ax.plot(fpr, tpr, color=MCOL[m], lw=1.6, label=f"{NAMES[m]}  {pm.loc[m, 'auc']:.3f}")
     ax.plot([0, 1], [0, 1], color=GRID, lw=1)
     ax.set_xlabel("False positive rate"); ax.set_ylabel("True positive rate")
     ax.legend(frameon=False, fontsize=6.3, loc="lower right", title="AUC (grouped CV)", title_fontsize=6.5)
-    ax.set_title("(a) ROC, soil domain (n=327)", fontsize=9, loc="left")
+    ax.set_title(f"(a) ROC, all cases (n={len(y)})", fontsize=9, loc="left")
     ax = axes[1]
-    for m in ("B_physics", "D_hybrid", "A_heuristic"):
+    for m in ("B_physics", "D_hybrid", "E_logistic"):
         pt, pp = calibration_curve(y, oof[m], n_bins=8, strategy="quantile")
         ax.plot(pp, pt, "-o", color=MCOL[m], ms=3.5, lw=1.4, label=f"{NAMES[m]}  ECE {pm.loc[m, 'ece']:.3f}")
     ax.plot([0, 1], [0, 1], color=GRID, lw=1)
@@ -534,14 +534,14 @@ def fig_validation():
     ax.legend(frameon=True, framealpha=0.95, edgecolor="none", fontsize=6.3, loc="lower right")
     ax.set_title("(b) Reliability diagram", fontsize=9, loc="left")
     ax = axes[2]
-    g = pd.read_csv(RES / "cv_folds_grouped_domain.csv").groupby("model").auc.agg(["mean", "std"])
-    r = pd.read_csv(RES / "pooled_metrics_random_domain.csv", index_col=0).auc
-    x = np.arange(4)
+    g = pd.read_csv(RES / "cv_folds_grouped_all.csv").groupby("model").auc.agg(["mean", "std"])
+    r = pd.read_csv(RES / "pooled_metrics_random_all.csv", index_col=0).auc
+    x = np.arange(5)
     ax.bar(x - 0.2, g.loc[list(NAMES), "mean"], 0.38, yerr=g.loc[list(NAMES), "std"], color=BLUE,
            capsize=2, error_kw={"lw": 0.8}, label="grouped CV (honest)")
     ax.bar(x + 0.2, r.loc[list(NAMES)], 0.38, color=ORANGE, label="random CV (leaky)")
     ax.axhline(0.8, color=INK, lw=0.8, ls="--"); ax.axhline(0.7, color=MUTED, lw=0.8, ls=":")
-    ax.set_xticks(x, ["A", "B", "C", "D"]); ax.set_ylim(0.5, 1.0); ax.set_ylabel("AUC")
+    ax.set_xticks(x, ["A", "B", "C", "D", "E"]); ax.set_ylim(0.5, 1.0); ax.set_ylabel("AUC")
     ax.legend(frameon=False, fontsize=6.5, loc="upper left"); ax.set_title("(c) AUC: grouped vs random CV", fontsize=9, loc="left")
     fig.tight_layout()
     save(fig, "F10_validation")
@@ -552,7 +552,7 @@ def fig_validation():
 # --------------------------------------------------------------------------
 def fig_machine_interpretation():
     cases = pd.read_csv(RES / "cases_with_fs.csv")
-    dom = cases[E.in_domain(cases)].reset_index(drop=True)
+    dom = cases.drop(columns=["pf_mc"], errors="ignore")     # primary analysis: all cases
     model = E.fit_final(dom)
     feats = E.RAW + E.PHYS
     X, y = dom[feats], dom.failed
@@ -584,7 +584,7 @@ def fig_machine_interpretation():
     pd.Series(grouped).to_csv(RES / "grouped_importance.csv")
     ax.text(0.98, 0.14, f"block permutation: physics {grouped['physics block']:.3f}, "
             f"raw {grouped['raw block']:.3f}", transform=ax.transAxes, ha="right", fontsize=6.5, color=MUTED)
-    for k, f in enumerate(["log_fs", "c", "phi", "beta", "ru", "stability_number"]):
+    for k, f in enumerate(["log_fs", "c", "phi", "beta", "H", "gamma"]):
         ax = fig.add_subplot(gs[k // 3, 1 + k % 3])
         pdp = partial_dependence(model.model, X, [feats.index(f)], grid_resolution=40, kind="both")
         grid = pdp["grid_values"][0]
@@ -628,6 +628,143 @@ def fig_risk_plane():
     save(fig, "F12_risk_plane")
 
 
+# --------------------------------------------------------------------------
+# F13 How Monte Carlo affects the model
+# --------------------------------------------------------------------------
+AUD = ROOT / "results" / "audit"
+
+
+def fig_mc_effect():
+    cases = pd.read_csv(RES / "cases_with_fs.csv")
+    fig, axes = plt.subplots(1, 3, figsize=(7.6, 2.8), gridspec_kw={"width_ratios": [1, 1.35, 1]})
+    ax = axes[0]
+    pt, pp = calibration_curve(cases.failed, cases.pf_mc, n_bins=6, strategy="quantile")
+    ax.plot(pp, pt, "-o", color=ORANGE, ms=4, lw=1.5, label="Raw Monte Carlo $P_f$")
+    oof = pd.read_csv(RES / "oof_grouped_all.csv")
+    pt2, pp2 = calibration_curve(oof.failed, oof.D_hybrid, n_bins=6, strategy="quantile")
+    ax.plot(pp2, pt2, "-o", color=BLUE, ms=4, lw=1.5, label="Hybrid engine (OOF)")
+    ax.plot([0, 1], [0, 1], color=GRID, lw=1)
+    ax.set_xlabel("Predicted probability of failure"); ax.set_ylabel("Observed failure frequency")
+    ax.set_ylim(0, 1); ax.legend(frameon=False, fontsize=6.8, loc="upper left")
+    ax.set_title("(a) Is $P_f$ a real probability?", fontsize=9, loc="left")
+
+    ax = axes[1]
+    t = pd.read_csv(AUD / "mc_assumption_sensitivity.csv")
+    short = ["v1 uniform", "v2 base", "v2 ρ=0", "v2 ρ=−0.7", "v2 COV×0.5", "v2 COV×1.5", "v2 roots×0.4"]
+    left = np.zeros(len(t))
+    for v, col in zip(VARIABLES, SERIES):
+        w = t[f"w_{v}"].to_numpy()
+        ax.barh(range(len(t)), w, left=left, color=col, edgecolor="white", linewidth=1.2, label=SHORT[v])
+        left += w
+    ax.set_yticks(range(len(t)), short, fontsize=7.5); ax.invert_yaxis(); ax.set_xlim(0, 1)
+    ax.set_xlabel("Normalised total Sobol' weight")
+    ax.legend(frameon=False, fontsize=6.3, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.22))
+    ax.set_title("(b) Weights under Monte Carlo assumptions", fontsize=9, loc="left")
+
+    ax = axes[2]
+    n = pd.read_csv(AUD / "mc_sample_size.csv")
+    obs = pd.read_csv(AUD / "scoring_uncertainty_case.csv")
+    ax.plot(n.N, n.pf_sd, "-o", color=BLUE, ms=4, lw=1.5, label="Monte Carlo noise (s.d. of $P_f$)")
+    spread = (obs.loc[obs.p_err == 0.2, "pf_p95"].item() - obs.loc[obs.p_err == 0.2, "pf_p05"].item()) / 3.29
+    ax.axhline(spread, color=RED, lw=1.2, ls="--", label="Scoring error 20%\n(equiv. s.d. of $P_f$)")
+    ax.axvline(400, color=MUTED, lw=0.8, ls=":")
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("Samples per configuration N")
+    ax.set_ylabel("s.d. of case-study $P_f$"); ax.legend(frameon=False, fontsize=6.5, loc="lower left")
+    ax.set_title("(c) Sampling noise vs scoring error", fontsize=9, loc="left")
+    fig.tight_layout()
+    save(fig, "F13_monte_carlo_effect")
+
+
+# --------------------------------------------------------------------------
+# F14 Validation bias: how analysis choices move the reported accuracy
+# --------------------------------------------------------------------------
+def fig_validation_bias():
+    fig, axes = plt.subplots(1, 3, figsize=(7.6, 2.8))
+    ax = axes[0]
+    est = pd.read_csv(AUD / "cv_estimators_all.csv", index_col=0).loc["D_hybrid"]
+    free = pd.read_csv(AUD / "cv_estimators_all.csv", index_col=0).loc["C_ml_raw"]
+    labels = ["Per-fold\nmean", "Single-pass\nOOF", "5-repeat\naveraged OOF"]
+    vals = [est.auc_fold_mean, est.auc_pooled_single, est.auc_pooled_avg5]
+    vals_free = [free.auc_fold_mean, free.auc_pooled_single, free.auc_pooled_avg5]
+    x = np.arange(3)
+    ax.bar(x - 0.2, vals, 0.38, color=BLUE, label="D fully monotone (adopted)")
+    ax.bar(x + 0.2, vals_free, 0.38, color=AQUA, label="C unconstrained (H, γ free)")
+    for xi, v in zip(x, vals):
+        ax.text(xi - 0.2, v + 0.004, f"{v:.3f}", ha="center", fontsize=6.5)
+    for xi, v in zip(x, vals_free):
+        ax.text(xi + 0.2, v + 0.004, f"{v:.3f}", ha="center", fontsize=6.5)
+    ax.set_xticks(x, labels, fontsize=7); ax.set_ylim(0.8, 0.95); ax.set_ylabel("AUC (grouped CV, all cases)")
+    ax.legend(frameon=False, fontsize=6.3, loc="upper left")
+    ax.set_title("(a) Estimator and constraint choice", fontsize=9, loc="left")
+
+    ax = axes[1]
+    d = pd.read_csv(AUD / "domain_sensitivity.csv")
+    ax.scatter(d.n, d.auc_physics, s=14, color=ORANGE, label="B physics only", edgecolor="white", lw=0.5)
+    ax.scatter(d.n, d.auc_hybrid, s=14, color=BLUE, label="D hybrid", edgecolor="white", lw=0.5)
+    sel = d[(d.gamma_max == 23) & (d.H_max == 100) & (d.ru_max == 0.9)]
+    ax.scatter(sel.n, sel.auc_physics, s=60, facecolor="none", edgecolor=INK, lw=1.2, label="domain used earlier")
+    ax.scatter(sel.n, sel.auc_hybrid, s=60, facecolor="none", edgecolor=INK, lw=1.2)
+    ax.set_xlabel("Cases retained by domain filter"); ax.set_ylabel("AUC")
+    ax.legend(frameon=False, fontsize=6.5, loc="lower left"); ax.set_ylim(0.6, 0.95)
+    ax.set_title("(b) 48 alternative domain filters", fontsize=9, loc="left")
+
+    ax = axes[2]
+    pm = pd.read_csv(RES / "pooled_metrics_grouped_all.csv", index_col=0)
+    order = ["A_heuristic", "B_physics", "E_logistic", "D_hybrid", "C_ml_raw"]
+    ax.barh(range(5), pm.loc[order, "auc"], color=[MCOL[m] for m in order])
+    for i, m in enumerate(order):
+        ax.text(pm.loc[m, "auc"] + 0.005, i, f"{pm.loc[m, 'auc']:.3f}", va="center", fontsize=7)
+    ax.set_yticks(range(5), [NAMES[m] for m in order], fontsize=7); ax.set_xlim(0.5, 1.0)
+    ax.axvline(0.8, color=INK, lw=0.8, ls="--"); ax.set_xlabel("AUC (single-pass OOF, all cases)")
+    ax.set_title("(c) Fair baseline comparison", fontsize=9, loc="left")
+    fig.tight_layout()
+    save(fig, "F14_validation_bias")
+
+
+# --------------------------------------------------------------------------
+# F15 How the score is taken (worked example) + scoring uncertainty
+# --------------------------------------------------------------------------
+def fig_scoring():
+    fig = plt.figure(figsize=(7.6, 3.6))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.55, 1])
+    ax = fig.add_subplot(gs[0]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
+    rows = [("Soil: medium clay", "3"), ("Slope angle 45°", "4"), ("Groundwater: shallow", "4"),
+            ("Rain 200–350 mm event", "4"), ("Seismic: static", "1"), ("Coffee plantation", "2")]
+    ax.text(0.02, 0.96, "Field observation", fontsize=8, fontweight="bold")
+    ax.text(0.33, 0.96, "Score", fontsize=8, fontweight="bold")
+    for i, (obs, sc) in enumerate(rows):
+        y = 0.85 - i * 0.12
+        box(ax, 0.15, y, 0.27, 0.09, obs, fs=7, fc=PANEL)
+        box(ax, 0.36, y, 0.06, 0.09, sc, fs=8, bold=True)
+        arrow(ax, (0.285, y), (0.33, y))
+        arrow(ax, (0.39, y), (0.47, 0.55), lw=0.6)
+    box(ax, 0.58, 0.55, 0.20, 0.20, "Look-up table\n$5^6$=15,625 rows\n$P_f$ from Monte\nCarlo (N=400)", fs=7, fc="#fde9e1")
+    box(ax, 0.58, 0.22, 0.20, 0.11, "Settlement 80 m\n→ score 4", fs=7, fc="#e8f0fb")
+    box(ax, 0.86, 0.55, 0.20, 0.13, "HI = $P_f$ = 0.86", fs=7.5, bold=True)
+    box(ax, 0.86, 0.22, 0.20, 0.13, "VI = (0.667·4 +\n0.333·2 − 1)/4 = 0.58", fs=7)
+    box(ax, 0.86, 0.04, 0.24, 0.08, "RI = √(HI·VI) = 0.71 → IV*", fs=7.5, bold=True, fc="#f6c9b5")
+    arrow(ax, (0.68, 0.55), (0.76, 0.55)); arrow(ax, (0.68, 0.22), (0.76, 0.22))
+    arrow(ax, (0.86, 0.485), (0.86, 0.085), rad=0.0)
+    ax.text(0.02, 0.0, "*model output, not validated against observed landslides (criterion A8)",
+            fontsize=6.5, color=MUTED, style="italic")
+    ax = fig.add_subplot(gs[1])
+    t = pd.read_csv(AUD / "scoring_uncertainty_case.csv")
+    classes = ["II", "III", "IV", "V"]
+    cols = ["#b3cdef", "#c9c7c0", "#e98e6b", "#a8462a"]
+    left = np.zeros(len(t))
+    for k, col in zip(classes, cols):
+        v = t[f"P(class {k})"].to_numpy()
+        ax.barh(range(len(t)), v, left=left, color=col, edgecolor="white", linewidth=1.2, label=f"Class {k}")
+        left += v
+    ax.set_yticks(range(len(t)), [f"{p:.0%}" for p in t.p_err]); ax.invert_yaxis()
+    ax.set_ylabel("Chance each score is\nmis-assigned by ±1 class"); ax.set_xlabel("Probability of resulting RI class")
+    ax.legend(frameon=False, fontsize=6.5, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    ax.set_title("(b) Scoring error → class", fontsize=9, loc="left"); ax.set_xlim(0, 1)
+    fig.text(0.02, 0.97, "(a) How a field sheet becomes a risk class (case study)", fontsize=9)
+    fig.tight_layout()
+    save(fig, "F15_scoring")
+
+
 def main():
     grid = pd.read_csv(RES / "full_factorial_v2.csv")
     sob, S2 = exact_sobol(grid, VARIABLES)
@@ -644,6 +781,9 @@ def main():
     fig_validation()
     fig_machine_interpretation()
     fig_risk_plane()
+    fig_mc_effect()
+    fig_validation_bias()
+    fig_scoring()
 
 
 if __name__ == "__main__":

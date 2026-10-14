@@ -4,8 +4,10 @@ validasi yang jujur (cross-validation berkelompok).
 
 Empat model dibandingkan pada data kasus nyata yang SAMA:
 
-  A. Heuristik  : indeks skor berbobot sama (mewakili pendekatan skoring/AHP;
-                  setiap variabel diberi skor kuintil 1-5 lalu dijumlah).
+  A. Heuristik  : indeks skor berbobot SAMA (skor kuintil 1-5, arah ditetapkan
+                  peneliti). BUKAN AHP: tidak ada bobot pakar yang diuji.
+  E. Logistik   : regresi logistik pada 6 parameter mentah (pembanding
+                  statistik linear yang adil untuk "bobot apa pun").
   B. Fisika     : FS Bishop -> probabilitas lewat kalibrasi logistik log(FS).
   C. ML murni   : Gradient Boosting pada 6 parameter mentah.
   D. Hibrida    : Gradient Boosting pada parameter mentah + fitur fisika
@@ -31,8 +33,12 @@ from .metrics import classification_metrics
 RAW = ["gamma", "c", "phi", "beta", "H", "ru"]
 PHYS = ["log_fs", "stability_number", "friction_ratio"]
 
-# Arah fisik tiap fitur terhadap peluang gagal (+1 naik, -1 turun, 0 bebas)
-MONOTONE = {"gamma": 0, "c": -1, "phi": -1, "beta": 1, "H": 0, "ru": 1,
+# Arah fisik tiap fitur terhadap peluang gagal (+1 naik, -1 turun, 0 bebas).
+# Untuk c' >= 0, FS Bishop tidak pernah naik bila gamma atau H naik (suku
+# kohesi c'/(gamma*H) mengecil), jadi keduanya dibatasi +1. Tanpa batasan
+# ini model belajar pola bergerigi pada H dan gamma (menghafal lereng/sumber
+# data tertentu) yang menaikkan AUC ~0.02-0.04 secara tidak fisik (audit).
+MONOTONE = {"gamma": 1, "c": -1, "phi": -1, "beta": 1, "H": 1, "ru": 1,
             "log_fs": -1, "stability_number": -1, "friction_ratio": -1}
 
 # Arah skor heuristik: +1 berarti nilai besar = lebih berbahaya
@@ -108,11 +114,25 @@ class _FeatureModel:
         return self.model.predict_proba(X[self.features])
 
 
+class LogisticRaw:
+    """Regresi logistik (terstandar) pada 6 parameter mentah."""
+
+    def fit(self, X, y):
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        self.m = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(X[RAW], y)
+        return self
+
+    def predict_proba(self, X):
+        return self.m.predict_proba(X[RAW])
+
+
 MODELS = {
     "A_heuristic": lambda seed: HeuristicIndex(),
     "B_physics": lambda seed: PhysicsCalibrated(),
     "C_ml_raw": lambda seed: make_ml(RAW, seed=seed),
     "D_hybrid": lambda seed: make_ml(RAW + PHYS, monotone=True, seed=seed),
+    "E_logistic": lambda seed: LogisticRaw(),
 }
 
 
@@ -122,12 +142,18 @@ MODELS = {
 def cross_validate(df, n_splits=5, n_repeats=5, grouped=True):
     """
     Return:
-      folds : DataFrame metrik per fold per model
-      oof   : prediksi out-of-fold (dirata-rata antar ulangan) per model
+      folds  : metrik per fold per model
+      oof    : prediksi out-of-fold dirata-rata antar ulangan (HANYA untuk plot;
+               merata-rata 5 ulangan = ensemble, sedikit optimistis)
+      pooled : metrik pada OOF tiap ulangan (setiap kasus diprediksi tepat
+               sekali oleh model yang tidak melihatnya), dirata-rata antar
+               ulangan -> ESTIMATOR UTAMA
     """
     X, y, groups = df, df["failed"].to_numpy(), df["group"].to_numpy()
     rows, oof = [], {m: np.zeros(len(df)) for m in MODELS}
+    pooled = []
     for rep in range(n_repeats):
+        rep_oof = {m: np.zeros(len(df)) for m in MODELS}
         if grouped:
             splitter = StratifiedGroupKFold(n_splits, shuffle=True, random_state=rep)
             splits = splitter.split(X, y, groups)
@@ -138,9 +164,13 @@ def cross_validate(df, n_splits=5, n_repeats=5, grouped=True):
                 model = factory(rep).fit(X.iloc[tr], y[tr])
                 p = model.predict_proba(X.iloc[te])[:, 1]
                 oof[name][te] += p / n_repeats
+                rep_oof[name][te] = p
                 rows.append({"model": name, "repeat": rep, "fold": fold,
                              **classification_metrics(y[te], p)})
-    return pd.DataFrame(rows), pd.DataFrame(oof)
+        for name in MODELS:
+            pooled.append({"model": name, "repeat": rep, **classification_metrics(y, rep_oof[name])})
+    pooled = pd.DataFrame(pooled).groupby("model").mean(numeric_only=True).drop(columns="repeat")
+    return pd.DataFrame(rows), pd.DataFrame(oof), pooled
 
 
 def summarize(folds):

@@ -1,0 +1,21 @@
+Part 1 {'raw_rows': 627, 'removed_gamma_lt_10': 52, 'removed_failed_share': 0.5576923076923077, 'kept_rows': 575, 'phi_equal_0': 20, 'c_equal_0': 52, 'ru_ge_1': 33, 'groups': 466, 'multi_member_groups': 71, 'groups_with_conflicting_labels': 10, 'stable_with_fs_lt_1': 150, 'stable_total': 288, 'failed_with_fs_ge_1': 78, 'failed_total': 287}
+Part 2 [all]
+              auc_fold_mean  auc_fold_sd  ...  ece_fold_mean  ece_pooled_avg5
+model                                    ...                                
+A_heuristic          0.579        0.049  ...          0.104            0.072
+B_physics            0.648        0.050  ...          0.094            0.048
+C_ml_raw             0.906        0.026  ...          0.093            0.038
+D_hybrid             0.863        0.038  ...          0.116            0.071
+E_logistic           0.735        0.044  ...          0.110            0.054
+
+[5 rows x 5 columns]
+Part 2 [domain]
+              auc_fold_mean  auc_fold_sd  ...  ece_fold_mean  ece_pooled_avg5
+model                                    ...                                
+A_heuristic          0.680        0.094  ...          0.171            0.127
+B_physics            0.758        0.059  ...          0.160            0.082
+C_ml_raw             0.913        0.032  ...          0.119            0.060
+D_hybrid             0.871        0.047  ...          0.141            0.073
+E_logistic           0.827        0.065  ...          0.138            0.043
+
+[5 rows x 5 columns]

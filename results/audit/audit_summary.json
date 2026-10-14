@@ -1,0 +1,576 @@
+{
+  "data": {
+    "raw_rows": 627,
+    "removed_gamma_lt_10": 52,
+    "removed_failed_share": 0.5576923076923077,
+    "kept_rows": 575,
+    "phi_equal_0": 20,
+    "c_equal_0": 52,
+    "ru_ge_1": 33,
+    "groups": 466,
+    "multi_member_groups": 71,
+    "groups_with_conflicting_labels": 10,
+    "stable_with_fs_lt_1": 150,
+    "stable_total": 288,
+    "failed_with_fs_ge_1": 78,
+    "failed_total": 287
+  },
+  "validation": {
+    "all": {
+      "table": {
+        "A_heuristic": {
+          "auc_fold_mean": 0.5787,
+          "auc_fold_sd": 0.0494,
+          "auc_pooled_single": 0.5812,
+          "auc_pooled_avg5": 0.5827,
+          "ece_fold_mean": 0.1038,
+          "ece_pooled_single": 0.0743,
+          "ece_pooled_avg5": 0.0715,
+          "brier_fold_mean": 0.2471,
+          "brier_pooled_avg5": 0.2469,
+          "sens_pooled_single": 0.5944,
+          "spec_pooled_single": 0.5424
+        },
+        "B_physics": {
+          "auc_fold_mean": 0.6477,
+          "auc_fold_sd": 0.0498,
+          "auc_pooled_single": 0.6454,
+          "auc_pooled_avg5": 0.6463,
+          "ece_fold_mean": 0.0939,
+          "ece_pooled_single": 0.0538,
+          "ece_pooled_avg5": 0.048,
+          "brier_fold_mean": 0.2367,
+          "brier_pooled_avg5": 0.2366,
+          "sens_pooled_single": 0.4739,
+          "spec_pooled_single": 0.6597
+        },
+        "C_ml_raw": {
+          "auc_fold_mean": 0.9056,
+          "auc_fold_sd": 0.0262,
+          "auc_pooled_single": 0.9059,
+          "auc_pooled_avg5": 0.9176,
+          "ece_fold_mean": 0.0932,
+          "ece_pooled_single": 0.0555,
+          "ece_pooled_avg5": 0.0376,
+          "brier_fold_mean": 0.1228,
+          "brier_pooled_avg5": 0.1133,
+          "sens_pooled_single": 0.8453,
+          "spec_pooled_single": 0.8285
+        },
+        "D_hybrid": {
+          "auc_fold_mean": 0.899,
+          "auc_fold_sd": 0.0294,
+          "auc_pooled_single": 0.8983,
+          "auc_pooled_avg5": 0.9059,
+          "ece_fold_mean": 0.0895,
+          "ece_pooled_single": 0.0486,
+          "ece_pooled_avg5": 0.0355,
+          "brier_fold_mean": 0.1257,
+          "brier_pooled_avg5": 0.1195,
+          "sens_pooled_single": 0.8425,
+          "spec_pooled_single": 0.8229
+        },
+        "E_logistic_raw": {
+          "auc_fold_mean": 0.7346,
+          "auc_fold_sd": 0.0435,
+          "auc_pooled_single": 0.731,
+          "auc_pooled_avg5": 0.734,
+          "ece_fold_mean": 0.11,
+          "ece_pooled_single": 0.0632,
+          "ece_pooled_avg5": 0.0538,
+          "brier_fold_mean": 0.2123,
+          "brier_pooled_avg5": 0.2118,
+          "sens_pooled_single": 0.6314,
+          "spec_pooled_single": 0.6979
+        }
+      },
+      "auc_D_groupboot": [
+        0.9058730435207949,
+        0.8778664577107302,
+        0.9295157020255549
+      ],
+      "auc_D_caseboot_ci": [
+        0.880187644916823,
+        0.929336113796925
+      ],
+      "dAUC_D_minus_A_heuristic_groupboot": [
+        0.3220912212276713,
+        0.2652378755754206,
+        0.3798458675163178
+      ],
+      "dAUC_D_minus_B_physics_groupboot": [
+        0.2591456269930916,
+        0.20985401425683192,
+        0.3073288216789794
+      ],
+      "dAUC_D_minus_C_ml_raw_groupboot": [
+        -0.011835785040711857,
+        -0.02570970349781137,
+        0.0013362419557893155
+      ],
+      "dAUC_D_minus_E_logistic_raw_groupboot": [
+        0.1720172309466622,
+        0.13170678732110946,
+        0.2120265170413479
+      ],
+      "threshold_for_90pct_recall": 0.3635449011866802,
+      "specificity_at_90pct_recall": 0.7743055555555556
+    },
+    "domain": {
+      "table": {
+        "A_heuristic": {
+          "auc_fold_mean": 0.6804,
+          "auc_fold_sd": 0.0944,
+          "auc_pooled_single": 0.6797,
+          "auc_pooled_avg5": 0.6843,
+          "ece_fold_mean": 0.1706,
+          "ece_pooled_single": 0.1282,
+          "ece_pooled_avg5": 0.1268,
+          "brier_fold_mean": 0.2333,
+          "brier_pooled_avg5": 0.2329,
+          "sens_pooled_single": 0.601,
+          "spec_pooled_single": 0.6589
+        },
+        "B_physics": {
+          "auc_fold_mean": 0.7578,
+          "auc_fold_sd": 0.0585,
+          "auc_pooled_single": 0.7565,
+          "auc_pooled_avg5": 0.7563,
+          "ece_fold_mean": 0.1602,
+          "ece_pooled_single": 0.0748,
+          "ece_pooled_avg5": 0.0818,
+          "brier_fold_mean": 0.1941,
+          "brier_pooled_avg5": 0.1939,
+          "sens_pooled_single": 0.8515,
+          "spec_pooled_single": 0.5519
+        },
+        "C_ml_raw": {
+          "auc_fold_mean": 0.9126,
+          "auc_fold_sd": 0.0318,
+          "auc_pooled_single": 0.91,
+          "auc_pooled_avg5": 0.9204,
+          "ece_fold_mean": 0.1188,
+          "ece_pooled_single": 0.0661,
+          "ece_pooled_avg5": 0.0597,
+          "brier_fold_mean": 0.1134,
+          "brier_pooled_avg5": 0.1023,
+          "sens_pooled_single": 0.8808,
+          "spec_pooled_single": 0.7922
+        },
+        "D_hybrid": {
+          "auc_fold_mean": 0.8957,
+          "auc_fold_sd": 0.039,
+          "auc_pooled_single": 0.8967,
+          "auc_pooled_avg5": 0.9031,
+          "ece_fold_mean": 0.1197,
+          "ece_pooled_single": 0.0831,
+          "ece_pooled_avg5": 0.0552,
+          "brier_fold_mean": 0.1218,
+          "brier_pooled_avg5": 0.1124,
+          "sens_pooled_single": 0.8586,
+          "spec_pooled_single": 0.8016
+        },
+        "E_logistic_raw": {
+          "auc_fold_mean": 0.8266,
+          "auc_fold_sd": 0.0648,
+          "auc_pooled_single": 0.8196,
+          "auc_pooled_avg5": 0.8224,
+          "ece_fold_mean": 0.1379,
+          "ece_pooled_single": 0.0598,
+          "ece_pooled_avg5": 0.0426,
+          "brier_fold_mean": 0.1657,
+          "brier_pooled_avg5": 0.1645,
+          "sens_pooled_single": 0.8333,
+          "spec_pooled_single": 0.6543
+        }
+      },
+      "auc_D_groupboot": [
+        0.9025090810543707,
+        0.862560080345168,
+        0.9375904929675921
+      ],
+      "auc_D_caseboot_ci": [
+        0.8661702400520415,
+        0.9389119615633492
+      ],
+      "dAUC_D_minus_A_heuristic_groupboot": [
+        0.21905444383882636,
+        0.14961321497554653,
+        0.28981670319186886
+      ],
+      "dAUC_D_minus_B_physics_groupboot": [
+        0.1478732054723125,
+        0.10023286875725912,
+        0.1997197382203114
+      ],
+      "dAUC_D_minus_C_ml_raw_groupboot": [
+        -0.017408488335412833,
+        -0.035286995178529894,
+        -0.0013133103689530901
+      ],
+      "dAUC_D_minus_E_logistic_raw_groupboot": [
+        0.08089213529732141,
+        0.0381618915472887,
+        0.1289591818851796
+      ],
+      "threshold_for_90pct_recall": 0.4486675784568345,
+      "specificity_at_90pct_recall": 0.7906976744186046
+    },
+    "domain_grid": {
+      "auc_physics": [
+        0.6367914338020471,
+        0.780284379033745
+      ],
+      "auc_hybrid": [
+        0.8715817560895326,
+        0.9259994002099265
+      ]
+    },
+    "grouping": [
+      {
+        "coarseness": 1,
+        "n_groups": 466,
+        "auc_ml": 0.911475812186243,
+        "auc_hybrid": 0.9031439976592083
+      },
+      {
+        "coarseness": 2,
+        "n_groups": 458,
+        "auc_ml": 0.9165683880048704,
+        "auc_hybrid": 0.9093654811560056
+      },
+      {
+        "coarseness": 4,
+        "n_groups": 463,
+        "auc_ml": 0.9067392775020139,
+        "auc_hybrid": 0.8912645352507622
+      },
+      {
+        "coarseness": 8,
+        "n_groups": 406,
+        "auc_ml": 0.9035078524115532,
+        "auc_hybrid": 0.888306422098595
+      }
+    ]
+  },
+  "mc_on_cases": {
+    "table": [
+      {
+        "predictor": "deterministic FS<1 (0/1)",
+        "subset": "all",
+        "auc": 0.6037,
+        "sensitivity": 0.7282,
+        "specificity": 0.4792,
+        "brier": 0.3965,
+        "ece": 0.3965
+      },
+      {
+        "predictor": "-FS (ranking only)",
+        "subset": "all",
+        "auc": 0.6501,
+        "sensitivity": NaN,
+        "specificity": NaN,
+        "brier": NaN,
+        "ece": NaN
+      },
+      {
+        "predictor": "deterministic FS<1 (0/1)",
+        "subset": "domain",
+        "auc": 0.6754,
+        "sensitivity": 0.6919,
+        "specificity": 0.6589,
+        "brier": 0.3211,
+        "ece": 0.3211
+      },
+      {
+        "predictor": "-FS (ranking only)",
+        "subset": "domain",
+        "auc": 0.7582,
+        "sensitivity": NaN,
+        "specificity": NaN,
+        "brier": NaN,
+        "ece": NaN
+      },
+      {
+        "predictor": "Monte Carlo Pf, base (c'0.45, phi'0.10, rho-0.5)",
+        "subset": "all",
+        "auc": 0.6332,
+        "sensitivity": 0.7317,
+        "specificity": 0.4757,
+        "brier": 0.3407,
+        "ece": 0.3312
+      },
+      {
+        "predictor": "Monte Carlo Pf, base (c'0.45, phi'0.10, rho-0.5)",
+        "subset": "domain",
+        "auc": 0.7477,
+        "sensitivity": 0.6919,
+        "specificity": 0.6512,
+        "brier": 0.2472,
+        "ece": 0.2383
+      },
+      {
+        "predictor": "Monte Carlo Pf, low COV (c'0.25, phi'0.05)",
+        "subset": "all",
+        "auc": 0.6257,
+        "sensitivity": 0.7317,
+        "specificity": 0.4757,
+        "brier": 0.3652,
+        "ece": 0.3698
+      },
+      {
+        "predictor": "Monte Carlo Pf, low COV (c'0.25, phi'0.05)",
+        "subset": "domain",
+        "auc": 0.7347,
+        "sensitivity": 0.6919,
+        "specificity": 0.6512,
+        "brier": 0.2777,
+        "ece": 0.2874
+      },
+      {
+        "predictor": "Monte Carlo Pf, independent (rho 0)",
+        "subset": "all",
+        "auc": 0.6303,
+        "sensitivity": 0.7352,
+        "specificity": 0.4757,
+        "brier": 0.3325,
+        "ece": 0.3174
+      },
+      {
+        "predictor": "Monte Carlo Pf, independent (rho 0)",
+        "subset": "domain",
+        "auc": 0.7477,
+        "sensitivity": 0.697,
+        "specificity": 0.6512,
+        "brier": 0.237,
+        "ece": 0.2235
+      }
+    ],
+    "calibration": [
+      {
+        "bin": "(-0.01, 0.1]",
+        "n": "144",
+        "mean_pf": "0.012",
+        "observed": "0.222"
+      },
+      {
+        "bin": "(0.1, 0.3]",
+        "n": "40",
+        "mean_pf": "0.21",
+        "observed": "0.575"
+      },
+      {
+        "bin": "(0.3, 0.5]",
+        "n": "30",
+        "mean_pf": "0.392",
+        "observed": "0.733"
+      },
+      {
+        "bin": "(0.5, 0.7]",
+        "n": "20",
+        "mean_pf": "0.606",
+        "observed": "0.55"
+      },
+      {
+        "bin": "(0.7, 0.9]",
+        "n": "40",
+        "mean_pf": "0.837",
+        "observed": "0.7"
+      },
+      {
+        "bin": "(0.9, 1.0]",
+        "n": "301",
+        "mean_pf": "0.992",
+        "observed": "0.568"
+      }
+    ],
+    "hybrid_lnFS_vs_PfMC": {
+      "D_hybrid": {
+        "auc_fold_mean": 0.9002,
+        "ece_fold_mean": 0.0915
+      },
+      "D_hybrid_pfMC": {
+        "auc_fold_mean": 0.9007,
+        "ece_fold_mean": 0.0897
+      }
+    }
+  },
+  "mc_assumptions": {
+    "variants": [
+      {
+        "variant": "v1 uniform ranges (slides)",
+        "mean_pf_all_15625": 0.6164,
+        "w_soil": 0.3727,
+        "w_geometry": 0.4272,
+        "w_groundwater": 0.0327,
+        "w_rainfall": 0.0009,
+        "w_seismic": 0.0557,
+        "w_vegetation": 0.1108,
+        "case_pf": 0.851,
+        "case_ri": 0.705,
+        "case_class": "IV"
+      },
+      {
+        "variant": "v2 base",
+        "mean_pf_all_15625": 0.6276,
+        "w_soil": 0.1897,
+        "w_geometry": 0.441,
+        "w_groundwater": 0.0321,
+        "w_rainfall": 0.0114,
+        "w_seismic": 0.0636,
+        "w_vegetation": 0.2622,
+        "case_pf": 0.8598,
+        "case_ri": 0.7086,
+        "case_class": "IV"
+      },
+      {
+        "variant": "v2 rho(c',phi') = 0",
+        "mean_pf_all_15625": 0.6279,
+        "w_soil": 0.1887,
+        "w_geometry": 0.4392,
+        "w_groundwater": 0.0311,
+        "w_rainfall": 0.0111,
+        "w_seismic": 0.0626,
+        "w_vegetation": 0.2673,
+        "case_pf": 0.8535,
+        "case_ri": 0.706,
+        "case_class": "IV"
+      },
+      {
+        "variant": "v2 rho(c',phi') = -0.7",
+        "mean_pf_all_15625": 0.6275,
+        "w_soil": 0.1902,
+        "w_geometry": 0.4417,
+        "w_groundwater": 0.0326,
+        "w_rainfall": 0.0115,
+        "w_seismic": 0.0641,
+        "w_vegetation": 0.26,
+        "case_pf": 0.8619,
+        "case_ri": 0.7095,
+        "case_class": "IV"
+      },
+      {
+        "variant": "v2 COV x 0.5",
+        "mean_pf_all_15625": 0.6272,
+        "w_soil": 0.1977,
+        "w_geometry": 0.4438,
+        "w_groundwater": 0.032,
+        "w_rainfall": 0.0113,
+        "w_seismic": 0.0652,
+        "w_vegetation": 0.2501,
+        "case_pf": 0.872,
+        "case_ri": 0.7136,
+        "case_class": "IV"
+      },
+      {
+        "variant": "v2 COV x 1.5",
+        "mean_pf_all_15625": 0.6311,
+        "w_soil": 0.1791,
+        "w_geometry": 0.4376,
+        "w_groundwater": 0.0329,
+        "w_rainfall": 0.012,
+        "w_seismic": 0.0629,
+        "w_vegetation": 0.2755,
+        "case_pf": 0.8502,
+        "case_ri": 0.7046,
+        "case_class": "IV"
+      },
+      {
+        "variant": "v2 root cohesion x 0.4 (Wu-Waldron correction)",
+        "mean_pf_all_15625": 0.705,
+        "w_soil": 0.2525,
+        "w_geometry": 0.5467,
+        "w_groundwater": 0.0402,
+        "w_rainfall": 0.0146,
+        "w_seismic": 0.078,
+        "w_vegetation": 0.068,
+        "case_pf": 0.9273,
+        "case_ri": 0.7359,
+        "case_class": "IV"
+      }
+    ],
+    "sample_size": [
+      {
+        "N": 50,
+        "pf_mean": 0.8586000000000001,
+        "pf_sd": 0.04986020457238418,
+        "share_class_IV": 1.0
+      },
+      {
+        "N": 100,
+        "pf_mean": 0.8589,
+        "pf_sd": 0.03669863757689106,
+        "share_class_IV": 1.0
+      },
+      {
+        "N": 400,
+        "pf_mean": 0.8580500000000001,
+        "pf_sd": 0.018505337067992032,
+        "share_class_IV": 1.0
+      },
+      {
+        "N": 2000,
+        "pf_mean": 0.859285,
+        "pf_sd": 0.007769251894487658,
+        "share_class_IV": 1.0
+      },
+      {
+        "N": 20000,
+        "pf_mean": 0.858277,
+        "pf_sd": 0.002458311615723278,
+        "share_class_IV": 1.0
+      }
+    ]
+  },
+  "scoring": {
+    "spearman_weightedHI_vs_Pf": 0.7595986453595022,
+    "class_agreement_weighted_vs_Pf": 0.452544,
+    "share_Pf_class_higher": 0.354176,
+    "observer_error": [
+      {
+        "p_err": 0.0,
+        "pf_p05": 0.85,
+        "pf_median": 0.85,
+        "pf_p95": 0.85,
+        "P(class I)": 0.0,
+        "P(class II)": 0.0,
+        "P(class III)": 0.0,
+        "P(class IV)": 1.0,
+        "P(class V)": 0.0
+      },
+      {
+        "p_err": 0.1,
+        "pf_p05": 0.6575,
+        "pf_median": 0.85,
+        "pf_p95": 0.9275,
+        "P(class I)": 0.0,
+        "P(class II)": 0.0028,
+        "P(class III)": 0.0466,
+        "P(class IV)": 0.9466,
+        "P(class V)": 0.004
+      },
+      {
+        "p_err": 0.2,
+        "pf_p05": 0.4125,
+        "pf_median": 0.85,
+        "pf_p95": 0.9725,
+        "P(class I)": 0.0,
+        "P(class II)": 0.0096,
+        "P(class III)": 0.102,
+        "P(class IV)": 0.8722,
+        "P(class V)": 0.0162
+      },
+      {
+        "p_err": 0.3,
+        "pf_p05": 0.4125,
+        "pf_median": 0.85,
+        "pf_p95": 0.975,
+        "P(class I)": 0.0,
+        "P(class II)": 0.0228,
+        "P(class III)": 0.1404,
+        "P(class IV)": 0.8046,
+        "P(class V)": 0.0322
+      }
+    ]
+  }
+}

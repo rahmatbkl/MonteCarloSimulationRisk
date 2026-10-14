@@ -99,6 +99,48 @@ def bishop_fs(gamma, c, phi_deg, beta_deg, H, ru, n_slices=40, n_iter=30, return
     return float(fs[k]), info
 
 
+def bishop_fs_samples(beta_deg, H, ru, gamma, c, phi_deg, n_circles=30, n_slices=40, n_iter=30,
+                      mean_params=None):
+    """
+    Monte Carlo Bishop: FS untuk banyak sampel parameter (gamma, c, phi berupa array).
+
+    Pendekatan standar untuk efisiensi: cari dulu lingkaran kritis dengan
+    parameter rata-rata (mean_params), simpan n_circles lingkaran dengan FS
+    terendah, lalu setiap sampel dievaluasi pada lingkaran-lingkaran tersebut
+    dan diambil minimumnya. Asumsi: lingkaran kritis tidak berpindah jauh
+    ketika parameter berubah di sekitar rata-ratanya.
+    """
+    g0, c0, p0 = mean_params if mean_params else (np.median(gamma), np.median(c), np.median(phi_deg))
+    _, info = bishop_fs(g0, c0, p0, beta_deg, H, ru, n_slices, n_iter, return_all=True)
+    allc = info["all"]
+    order = np.argsort(allc["fs"])[:n_circles]
+    order = order[np.isfinite(allc["fs"][order])]
+    x1, x2, xc, yc, R = (allc[k][order] for k in ("x1", "x2", "xc", "yc", "R"))
+
+    beta = np.radians(beta_deg)
+    frac = (np.arange(n_slices) + 0.5) / n_slices
+    x = x1[:, None] + frac[None, :] * (x2 - x1)[:, None]                 # (k, s)
+    b = ((x2 - x1) / n_slices)[:, None]
+    y_base = yc[:, None] - np.sqrt(np.clip(R[:, None] ** 2 - (x - xc[:, None]) ** 2, 1e-12, None))
+    h = np.clip(_ground(x, H, beta) - y_base, 0.0, None)
+    sin_a = np.clip((x - xc[:, None]) / R[:, None], -0.999, 0.999)
+    cos_a = np.sqrt(1 - sin_a**2)
+    loaded = h > 0
+
+    gamma = np.asarray(gamma, float)[:, None, None]
+    c = np.asarray(c, float)[:, None, None]
+    tan_phi = np.tan(np.radians(np.asarray(phi_deg, float)))[:, None, None]
+    W = gamma * h * b                                                      # (n, k, s)
+    resist = np.where(loaded, c * b + np.maximum(W * (1 - ru), 0.0) * tan_phi, 0.0)
+    driving = (W * sin_a).sum(2)
+    fs = np.ones(driving.shape)
+    for _ in range(n_iter):
+        m_alpha = np.maximum(cos_a + sin_a * tan_phi / fs[:, :, None], 1e-3)
+        fs = (resist / m_alpha).sum(2) / np.where(driving > 0, driving, np.nan)
+    fs = np.where(np.isfinite(fs) & (fs > 0), fs, np.inf)
+    return fs.min(axis=1)
+
+
 def bishop_fs_many(df):
     """FS Bishop untuk setiap baris DataFrame (kolom gamma, c, phi, beta, H, ru)."""
     return np.array([bishop_fs(r.gamma, r.c, r.phi, r.beta, r.H, r.ru)[0]

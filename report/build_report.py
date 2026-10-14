@@ -124,7 +124,7 @@ def on_page(canvas, doc):
     canvas.setFillColor(MUTED)
     if doc.page > 1:
         canvas.drawString(2 * cm, A4[1] - 1.2 * cm, "Physics-based Monte Carlo & hybrid engine for landslide risk")
-        canvas.drawRightString(A4[0] - 2 * cm, A4[1] - 1.2 * cm, "Technical report v2.0")
+        canvas.drawRightString(A4[0] - 2 * cm, A4[1] - 1.2 * cm, "Technical report v2.1 (audited)")
         canvas.setStrokeColor(RULE); canvas.setLineWidth(0.5)
         canvas.line(2 * cm, A4[1] - 1.35 * cm, A4[0] - 2 * cm, A4[1] - 1.35 * cm)
     canvas.drawCentredString(A4[0] / 2, 1.1 * cm, str(doc.page))
@@ -138,15 +138,20 @@ sob = pd.read_csv(RES / "sobol_exact.csv", index_col=0)
 acc = pd.read_csv(RES / "acceptance.csv")
 pm_dom = pd.read_csv(RES / "pooled_metrics_grouped_domain.csv", index_col=0)
 pm_all = pd.read_csv(RES / "pooled_metrics_grouped_all.csv", index_col=0)
-pm_rnd = pd.read_csv(RES / "pooled_metrics_random_domain.csv", index_col=0)
+pm_rnd = pd.read_csv(RES / "pooled_metrics_random_all.csv", index_col=0)
 site = json.loads((RES / "site_case_study.json").read_text())
 grouped_imp = pd.read_csv(RES / "grouped_importance.csv", index_col=0).iloc[:, 0]
 cases = pd.read_csv(RES / "cases_with_fs.csv")
+AUD = json.loads((ROOT / "results" / "audit" / "audit_summary.json").read_text())
 N_CASES = len(cases)
 VI = 0.584
 RI_PHYS = (site["pf"] * VI) ** 0.5
-MODEL_NAMES = {"A_heuristic": "A  Heuristic score index (AHP-like)", "B_physics": "B  Physics only (Bishop FS)",
-               "C_ml_raw": "C  Machine learning, raw inputs", "D_hybrid": "D  Hybrid, physics-monotone"}
+MODEL_NAMES = {"A_heuristic": "A  Equal-weight score index (not AHP)", "B_physics": "B  Physics only (Bishop FS)",
+               "E_logistic": "E  Logistic regression, raw inputs", "C_ml_raw": "C  Gradient boosting, unconstrained",
+               "D_hybrid": "D  Hybrid, fully physics-monotone"}
+N_PASS, N_FAIL, N_PEND = (acc.status == "PASS").sum(), (acc.status == "FAIL").sum(), (acc.status == "PENDING").sum()
+N_ANALYTIC = ((acc.status == "PASS") & (acc.basis == "analytic")).sum()
+A7 = acc.set_index("code").loc["A7", "value"]
 
 # --------------------------------------------------------------------------
 # Story
@@ -158,26 +163,28 @@ story += [Spacer(1, 3.2 * cm),
           P("Conceptualisation, mathematical formulation, model behaviour, machine learning engine, "
             "and acceptance protocol", "subtitle"),
           Spacer(1, 1.2 * cm),
-          P("Technical report, version 2.0  ·  14 October 2026", "subtitle"),
+          P("Technical report, version 2.1 (audited)  ·  14 October 2026", "subtitle"),
           P("Repository: rahmatbkl/MonteCarloSimulationRisk", "subtitle"),
           Spacer(1, 1.6 * cm),
           P("<b>Abstract</b>", "h2"),
-          P("Landslide susceptibility mapping in Indonesia is commonly based on the Analytical Hierarchy Process (AHP), "
-            "whose factor weights are elicited from experts and cannot be reproduced or converted into a probability. "
-            "This report formulates and verifies an alternative in which the hazard is computed from soil mechanics. "
-            "Six field variables (soil type, slope geometry, groundwater, rainfall, seismic load and vegetation) are "
-            "mapped onto literature-based probability distributions of physical parameters, propagated through the "
-            "infinite-slope and Bishop simplified limit-equilibrium equations by Monte Carlo simulation, and summarised "
-            "as a probability of failure P<sub>f</sub>. Exact variance-based (Sobol') sensitivity indices over the complete "
-            "5<super>6</super> score space replace subjective weights, and gradient, Jacobian and Hessian matrices describe how "
-            "parameters interact. A hybrid machine engine, a monotone gradient-boosting classifier whose response is "
-            "constrained to obey slope mechanics, was trained and validated on "
-            f"{N_CASES} published slope case histories using grouped cross-validation. In the soil-slope domain it "
-            f"reached AUC = {pm_dom.loc['D_hybrid', 'auc']:.3f} against {pm_dom.loc['A_heuristic', 'auc']:.3f} for an "
-            f"AHP-like heuristic index and {pm_dom.loc['B_physics', 'auc']:.3f} for physics alone, with an expected "
-            f"calibration error of {pm_dom.loc['D_hybrid', 'ece']:.3f}. The engine passes "
-            f"{(acc.status == 'PASS').sum()} of {len(acc)} acceptance criteria; the remaining criterion, spatial "
-            "validation against an Indonesian landslide inventory, is pending data.", "abstract"),
+          P("Landslide susceptibility mapping in Indonesia commonly relies on the Analytical Hierarchy Process (AHP), "
+            "whose factor weights are elicited from experts and cannot be converted into a probability. This report "
+            "formulates a physics-based alternative and audits it. Six field variables are mapped onto literature-based "
+            "distributions of physical parameters, propagated through infinite-slope and Bishop limit-equilibrium "
+            "equations by Monte Carlo simulation, and summarised as a probability of failure P<sub>f</sub>; exact "
+            "Sobol' indices over the 5<super>6</super> score space quantify the influence of each variable, and gradient, "
+            "Jacobian and Hessian matrices describe parameter interaction. A hybrid engine, gradient boosting constrained "
+            "to be monotone in every physical input, was validated on "
+            f"{N_CASES} published slope case histories with grouped cross-validation. On all cases (the pre-specified "
+            f"analysis) it reached AUC = {pm_all.loc['D_hybrid', 'auc']:.3f}, against "
+            f"{pm_all.loc['E_logistic', 'auc']:.3f} for logistic regression, {pm_all.loc['B_physics', 'auc']:.3f} for "
+            f"physics alone and {pm_all.loc['A_heuristic', 'auc']:.3f} for an equal-weight score. "
+            "An audit (Section 7) corrected earlier, more favourable figures and found three limits that must be stated "
+            f"plainly: raw Monte Carlo P<sub>f</sub> is not a calibrated probability on real slopes (ECE = {A7:.2f}); the "
+            "score-based risk index used in the field has not been validated against observed landslides; and the "
+            "variance-based weights depend strongly on how score classes are mapped to parameters. The engine passes "
+            f"{N_PASS} of {len(acc)} acceptance criteria ({N_ANALYTIC} of them design checks), fails {N_FAIL} and has "
+            f"{N_PEND} pending. It is a research and screening tool, not yet a basis for evacuation decisions.", "abstract"),
           PageBreak()]
 
 # Contents
@@ -185,7 +192,8 @@ story += [P("Contents", "h1")]
 toc = [("1", "Conceptualisation"), ("2", "Mathematical and physical formulation"),
        ("3", "Model behaviour: gradients, matrices and parameter hierarchy"), ("4", "The machine engine"),
        ("5", "Accuracy, acceptance and reliability"), ("6", "Risk index output and case study"),
-       ("7", "Position in the literature, limitations and next steps"), ("", "References")]
+       ("7", "Audit: corrected claims, validation bias, the role of Monte Carlo and scoring"),
+       ("8", "Position in the literature, limitations, ethical use and next steps"), ("", "References")]
 story += [P(f"<b>{n}</b>&nbsp;&nbsp;{t}" if n else f"&nbsp;&nbsp;&nbsp;&nbsp;{t}", "body") for n, t in toc]
 story += [Spacer(1, 0.4 * cm), P("<b>Notation.</b> c' effective cohesion (kPa); φ' effective friction angle; γ unit weight "
           "(kN/m³); β slope angle; H soil thickness normal to the slope (m), z = H/cos β vertical depth; m = h<sub>w</sub>/z "
@@ -203,8 +211,8 @@ story += [P("1  Conceptualisation", "h1"),
             "ratio below 0.10 shows only that the judgements are coherent rather than correct, and the resulting index is not "
             "a probability, so it cannot enter a quantitative risk assessment (Fell et al., 2008; Corominas et al., 2014). "
             "The objective of this work is a model in which every quantity that drives the decision is either measured, "
-            "taken from a published distribution, or computed from mechanics, and whose accuracy is demonstrated against "
-            "observed slope behaviour."),
+            "taken from a published distribution, or computed from mechanics, and whose accuracy is tested, honestly and "
+            "with its limits stated, against observed slope behaviour."),
           P("1.2  Conceptual framework", "h2"),
           P("The framework is organised in five stages (Figure 1). Field observations are recorded as Varnes-type classes "
             "(scores 1 to 5) or, where available, as measured parameters. A parameter model converts each class into a "
@@ -335,7 +343,8 @@ story += [P("3  Model behaviour: gradients, matrices and parameter hierarchy", "
           figure("F07_monte_carlo", "(a) FS distribution for the case-study slope. (b) Convergence of P<sub>f</sub> with its 95% "
                  "Wilson interval. (c) Sample size required for a target coefficient of variation of the P<sub>f</sub> estimator."),
           P("3.5  Hierarchy of parameters by variance decomposition", "h2"),
-          P("The exact Sobol' indices rank the field variables objectively (Table 2, Figure 8). Slope geometry is the "
+          P("Under the v2 class definitions, the exact Sobol' indices rank the field variables as follows (Table 2, Figure 8); "
+            "Section 7.3 shows how this ranking changes under other class definitions. Slope geometry is the "
             "dominant driver, followed by vegetation and soil type; together they explain over 85% of the variance of "
             "P<sub>f</sub> across the score space. Groundwater, seismic load and rainfall have small first-order effects, and "
             "their total effects are 1.8 to 4.7 times larger than their first-order effects, i.e. they act mainly through "
@@ -353,152 +362,271 @@ story += [P("3  Model behaviour: gradients, matrices and parameter hierarchy", "
           PageBreak()]
 
 # 4 Machine engine -------------------------------------------------------
-pmt = pm_dom
+pmt = pm_all
+VA = AUD["validation"]["all"]
+VD = AUD["validation"]["domain"]
+D = AUD["data"]
+d_log = VA["dAUC_D_minus_E_logistic_groupboot"]
+d_ml = VA["dAUC_D_minus_C_ml_raw_groupboot"]
+auc_ci = VA["auc_D_groupboot"]
 story += [P("4  The machine engine", "h1"),
           P("4.1  Architecture", "h2"),
           P("The machine engine combines the physics solver with a learning model (Figure 9). For each slope the Bishop "
             "solver computes FS, from which three physics features are derived: ln FS, the stability number "
             "N<sub>s</sub> = c'/γH and the friction ratio tan φ'/tan β. These are combined with the six raw inputs in a "
-            "gradient-boosting classifier with <i>monotone constraints</i>: the predicted probability of failure may only "
-            "decrease when FS, c', φ', N<sub>s</sub> or the friction ratio increases, and may only increase with β and "
-            "r<sub>u</sub>. The constraints make the learned model physically admissible by construction; a model that "
-            "fitted the data better by, for example, predicting lower risk for weaker soil would be rejected."),
+            "gradient-boosting classifier with <i>monotone constraints</i> on every input that has a definite physical "
+            "direction: the predicted probability of failure may not decrease when β, r<sub>u</sub>, γ or H increase, and "
+            "may not increase when FS, c', φ', N<sub>s</sub> or the friction ratio increase (for c' ≥ 0, Bishop FS never "
+            "rises with γ or H). An earlier version left γ and H unconstrained; the audit showed that it then learned jagged, "
+            "non-physical responses to these two inputs that raised AUC by 0.02–0.04 (Section 7)."),
           figure("F09_engine_architecture", "Architecture of the hybrid physics–machine-learning engine and its validation loop."),
           P("4.2  Data", "h2"),
-          P(f"The engine was trained and tested on the open database of Ma et al. (2022), 627 slope case histories with "
-            f"γ, c', φ', β, H, r<sub>u</sub> and observed status, compiled from earlier databases. After removing physically "
-            f"impossible unit weights (γ &lt; 10 kN/m³), {N_CASES} cases remain (287 failed, 288 stable). The compilations "
-            "overlap, so near-duplicate cases (rounded to 0.5 kN/m³, 1 kPa, 1°, 2% of H and 0.02 r<sub>u</sub>) were assigned "
-            "to 466 groups that are never split between training and test folds. A soil-slope domain of applicability "
-            "(γ ≤ 23 kN/m³, H ≤ 100 m, r<sub>u</sub> ≤ 0.9; 327 cases) excludes high rock-mass and open-pit slopes whose "
-            "stability is governed by discontinuities rather than by homogeneous c'–φ' strength."),
+          P(f"The engine was trained and tested on the open database of Ma et al. (2022), {D['raw_rows']} slope case histories "
+            f"with γ, c', φ', β, H, r<sub>u</sub> and observed status. {D['removed_gamma_lt_10']} rows with physically "
+            f"impossible unit weights (γ &lt; 10 kN/m³) were removed ({D['removed_failed_share']:.0%} of them failures), leaving "
+            f"{N_CASES} cases. The compilations overlap, so near-duplicate cases were assigned to {D['groups']} groups that are "
+            f"never split between training and test folds; {D['groups_with_conflicting_labels']} groups contain the same slope "
+            f"labelled both stable and failed. The database is strikingly inconsistent with homogeneous slope mechanics: "
+            f"{D['stable_with_fs_lt_1']} of {D['stable_total']} 'stable' slopes have a Bishop FS below 1 and "
+            f"{D['failed_with_fs_ge_1']} of {D['failed_total']} 'failed' slopes have FS ≥ 1. Many entries are high rock or "
+            "mine slopes, and recorded strengths are often back-analysed; the data therefore test a classifier of reported "
+            "outcomes, not the infinite-slope field model."),
           P("4.3  Models compared and validation design", "h2"),
-          P("Four models were evaluated on identical folds: (A) a heuristic index in which each input is scored by quintile "
-            "with the direction an expert would assume and summed with equal weights, representing judgement-based scoring; "
-            "(B) physics only, a two-parameter logistic calibration of ln FS; (C) gradient boosting on the raw inputs; and "
-            "(D) the monotone hybrid. Validation used stratified group 5-fold cross-validation repeated five times. Metrics "
-            "were computed on pooled out-of-fold predictions: AUC for discrimination, Brier score and expected calibration "
-            "error (ECE) for probability quality, and the true skill statistic (TSS). Random (non-grouped) cross-validation "
-            "was run in parallel to measure the optimism caused by duplicate leakage."),
-          table([["Model", "AUC (soil domain)", "Accuracy", "TSS", "Brier", "ECE", "AUC (all data)", "AUC random CV"]] +
-                [[MODEL_NAMES[m], f"{pmt.loc[m, 'auc']:.3f}", f"{pmt.loc[m, 'accuracy']:.3f}", f"{pmt.loc[m, 'tss']:.3f}",
-                  f"{pmt.loc[m, 'brier']:.3f}", f"{pmt.loc[m, 'ece']:.3f}", f"{pm_all.loc[m, 'auc']:.3f}",
-                  f"{pm_rnd.loc[m, 'auc']:.3f}"] for m in MODEL_NAMES],
-                "Out-of-fold performance under grouped cross-validation (5 folds × 5 repeats). Soil domain n = 327; all data "
-                f"n = {N_CASES}.", col_widths=[5.0 * cm, 1.9 * cm, 1.6 * cm, 1.3 * cm, 1.4 * cm, 1.3 * cm, 1.9 * cm, 1.9 * cm],
-                highlight=[4]),
+          P("Five models were evaluated on identical folds: (A) an equal-weight score index, each input scored by quintile "
+            "with an assumed direction (this is <i>not</i> AHP: no expert weights were elicited or tested); (B) physics only, "
+            "a two-parameter logistic calibration of ln FS; (E) logistic regression on the six raw inputs, the fair linear "
+            "baseline that represents the best any fixed weighting of these inputs can do; (C) unconstrained gradient "
+            "boosting; and (D) the fully monotone hybrid. Validation used stratified group 5-fold cross-validation repeated "
+            "five times. The <b>primary estimator</b> pools the out-of-fold predictions of each repeat, in which every case is "
+            "predicted once by a model that never saw it, and averages the metrics over repeats. The <b>primary population</b> "
+            "is all cases; the soil-slope domain (γ ≤ 23 kN/m³, H ≤ 100 m, r<sub>u</sub> ≤ 0.9) was defined after seeing early "
+            "results and is reported only as a secondary analysis."),
+          table([["Model", "AUC", "Accuracy", "Sensitivity", "Specificity", "Brier", "ECE", "AUC soil domain"]] +
+                [[MODEL_NAMES[m], f"{pmt.loc[m, 'auc']:.3f}", f"{pmt.loc[m, 'accuracy']:.3f}",
+                  f"{pmt.loc[m, 'sensitivity']:.3f}", f"{pmt.loc[m, 'specificity']:.3f}", f"{pmt.loc[m, 'brier']:.3f}",
+                  f"{pmt.loc[m, 'ece']:.3f}", f"{pm_dom.loc[m, 'auc']:.3f}"] for m in MODEL_NAMES],
+                f"Out-of-fold performance, grouped cross-validation, all cases (n = {N_CASES}); single-pass estimator averaged "
+                "over 5 repeats; threshold 0.5. The last column is the post-hoc soil domain (n = 327).",
+                col_widths=[5.2 * cm, 1.3 * cm, 1.6 * cm, 1.8 * cm, 1.8 * cm, 1.3 * cm, 1.2 * cm, 2.0 * cm], highlight=[5]),
           P("4.4  Results", "h2"),
-          P(f"The heuristic index performs poorly (AUC {pmt.loc['A_heuristic', 'auc']:.2f}), and its calibration curve is "
-            f"erratic (Figure 10b). Physics alone reaches AUC {pmt.loc['B_physics', 'auc']:.2f} in the soil domain but only "
-            f"{pm_all.loc['B_physics', 'auc']:.2f} on all data, because idealised homogeneous Bishop analysis cannot represent "
-            "rock-mass slopes or inconsistent pore-pressure records. The hybrid reaches "
-            f"AUC {pmt.loc['D_hybrid', 'auc']:.3f}, within 0.02 of unconstrained machine learning "
-            f"({pmt.loc['C_ml_raw', 'auc']:.3f}), while guaranteeing physically consistent responses. Random cross-validation "
-            "overstates AUC by about 0.02, a modest but real leakage effect that grouped validation removes."),
-          figure("F10_validation", "(a) ROC curves of the four models (pooled out-of-fold, soil domain). (b) Reliability "
+          P(f"The hybrid reaches AUC {pmt.loc['D_hybrid', 'auc']:.3f} (group-bootstrap 95% CI {auc_ci[1]:.3f}–{auc_ci[2]:.3f}). "
+            f"It exceeds logistic regression by {d_log[0]:.3f} (CI {d_log[1]:.3f}–{d_log[2]:.3f}) and physics alone by a "
+            "wider margin. The unconstrained learner C scores higher still, but part of that advantage comes from "
+            "non-physical patterns in γ and H; the constrained hybrid is preferred because every response it learns is "
+            f"admissible. At the default threshold the hybrid misses {1 - pmt.loc['D_hybrid', 'sensitivity']:.0%} of failed "
+            f"slopes. A threshold chosen to catch 90% of failures ({VA['threshold_for_90pct_recall']:.2f} on the averaged "
+            f"predictions) keeps specificity at {VA['specificity_at_90pct_recall']:.0%}; for life-safety screening such a "
+            "recall-oriented threshold is more appropriate than 0.5."),
+          figure("F10_validation", "(a) ROC curves of the five models (pooled out-of-fold, all cases). (b) Reliability "
                  "diagram. (c) Mean fold AUC (± 1 s.d.) under grouped and random cross-validation; dashed lines mark the "
                  "0.80 target and 0.70 minimum."),
           P("4.5  How the machine models", "h2"),
           P("Figure 11 opens the model. Permutation importance (11a) measures the loss of AUC when one feature is shuffled; "
             "partial-dependence and individual conditional expectation curves (11b) show the learned response to each "
-            "input with all others held at their observed values. Every response curve is monotone in the physically "
-            "required direction. Two findings must be reported plainly. First, slope height H and unit weight γ carry "
-            "the most individual importance, more than any single strength parameter. Second, when all three physics "
-            f"features are shuffled together the AUC drops by {grouped_imp['physics block']:.3f}, against "
-            f"{grouped_imp['raw block']:.3f} for the raw block. On this database the learner therefore extracts most "
-            "of its skill from the raw parameters and uses physics mainly as a constraint. Part of the importance of H and "
-            "γ may reflect differences between the source compilations rather than mechanics, which is why the spatial "
-            "validation in Section 5 is required before operational use."),
+            "input. Every response is monotone in the physically required direction, including γ and H. When the three "
+            f"physics features are shuffled together the AUC drops by {grouped_imp['physics block']:.3f}, against "
+            f"{grouped_imp['raw block']:.3f} for the raw block: the learner extracts most of its skill from the raw "
+            "parameters and uses physics mainly as structure and constraint."),
           figure("F11_machine_interpretation", "(a) Permutation importance (ΔAUC) of the hybrid model; orange bars are physics "
                  "features. (b) Partial dependence (black) and ICE curves (blue); arrows give the imposed monotone direction."),
           PageBreak()]
 
 # 5 Acceptance ------------------------------------------------------------
-rows = [["Gate", "Code", "Criterion", "Value", "Threshold", "Status"]]
+rows = [["Gate", "Code", "Criterion", "Value", "Threshold", "Basis", "Status"]]
 hl = []
 for i, r in acc.iterrows():
     v = "–" if pd.isna(r.value) else (f"{r.value:.2e}" if abs(r.value) < 1e-3 and r.value != 0 else f"{r.value:.3f}")
-    rows.append([r.gate.split(" ", 1)[1], r.code, r.description, v, r.threshold, r.status])
+    rows.append([r.gate.split(" ", 1)[1], r.code, r.description, v, r.threshold, r.basis, r.status])
     if r.status != "PASS":
         hl.append(len(rows) - 1)
 story += [P("5  Accuracy, acceptance and reliability", "h1"),
-          P("The engine is accepted only through explicit gates that follow the verification and validation (V&amp;V) "
-            "framework of Oberkampf, Trucano &amp; Hirsch (2003). <b>Verification</b> asks whether the equations are solved "
-            "correctly: analytical limits, Taylor's stability chart, the ACADS benchmark and agreement between FORM and "
-            "Monte Carlo. <b>Numerical reliability</b> asks whether simulation noise could change a conclusion: confidence "
-            "half-widths, seed stability of P<sub>f</sub> and of the Sobol' indices, and the COV of site-level estimates. "
-            "<b>Validation</b> asks whether predictions match observed behaviour: discrimination, superiority over the "
-            "heuristic and physics-only baselines, calibration, leakage and physical consistency. The thresholds follow "
-            "the research synthesis: AUC ≥ 0.70 as a minimum and ≥ 0.80 as a target (Hosmer &amp; Lemeshow, 2000), "
-            "COV(P<sub>f</sub>) ≤ 0.10, and spatially independent validation at Susceptibility Quality Level ≥ 5 "
-            "(Reichenbach et al., 2018)."),
-          table(rows, f"Acceptance protocol. {(acc.status == 'PASS').sum()} of {len(acc)} criteria pass; shaded rows are not "
-                "yet passed.", col_widths=[1.9 * cm, 1.2 * cm, 6.6 * cm, 1.6 * cm, 3.6 * cm, 2.0 * cm], highlight=hl),
-          P("<b>Site-level reliability.</b> For decisions on individual slopes the report recommends a dual criterion: the "
-            "SNI 8460:2017 minimum factor of safety (1.5 static, 1.1 seismic for permanent slopes, as cited in secondary "
-            "sources and to be confirmed against the standard) <i>and</i> a reliability index β<sub>R</sub> ≥ 3 "
-            "(P<sub>f</sub> ≤ 1.3 × 10<super>−3</super>; USACE level 'above average'). The two are not equivalent: a mean FS of 1.5 "
-            "corresponds (for lognormal FS) to β<sub>R</sub> ≈ 4.0 when the COV of FS is 0.10 but only ≈ 2.0 when it is 0.20, so a slope can "
-            "satisfy the deterministic code while carrying an unacceptable probability of failure."),
+          P("Acceptance follows the verification and validation (V&amp;V) framework of Oberkampf, Trucano &amp; Hirsch (2003). "
+            "<b>Verification</b> asks whether equations are solved correctly; <b>numerical</b> checks ask whether simulation "
+            "noise could change a conclusion; <b>validation</b> asks whether predictions match observed behaviour. Each "
+            "threshold is labelled by its basis: <i>literature</i> (taken from a cited source), <i>project-set</i> (chosen by "
+            "this project, not an external standard) or <i>analytic</i> (true by design, so a design check rather than a test). "
+            f"Of the {N_PASS} passes, {N_ANALYTIC} are analytic. The single failure is substantive: physics-derived P<sub>f</sub> "
+            "does not behave as a frequency on real slopes. The two pending criteria concern the tool that would actually be "
+            "used in the field."),
+          table(rows, f"Acceptance protocol (audited). {N_PASS} pass, {N_FAIL} fail, {N_PEND} pending; shaded rows are not passed.",
+                col_widths=[1.8 * cm, 1.0 * cm, 6.0 * cm, 1.4 * cm, 3.0 * cm, 1.7 * cm, 1.6 * cm], highlight=hl),
+          P("<b>Site-level reliability.</b> For decisions on individual slopes a dual criterion is recommended: the SNI "
+            "8460:2017 minimum factor of safety (1.5 static, 1.1 seismic for permanent slopes, cited from secondary sources "
+            "and still to be confirmed against the standard) <i>and</i> a reliability index β<sub>R</sub> ≥ 3. A mean FS of 1.5 "
+            "corresponds (for lognormal FS) to β<sub>R</sub> ≈ 4.0 when the COV of FS is 0.10 but only ≈ 2.0 when it is 0.20. "
+            "Because criterion A7 fails, β<sub>R</sub> computed from literature COVs should be treated as a relative measure "
+            "until it is calibrated against local outcomes."),
           PageBreak()]
 
 # 6 Output ----------------------------------------------------------------
+obs = {r["p_err"]: r for r in AUD["scoring"]["observer_error"]}
+var = AUD["mc_assumptions"]["variants"]
+pf_rng = (min(v["case_pf"] for v in var), max(v["case_pf"] for v in var))
 story += [P("6  Risk index output and case study", "h1"),
           P("The case study from the original slide decks (medium clay, 45° slope, shallow groundwater, high rainfall, "
             "static, coffee plantation, settlement 80 m away) is reproduced exactly by the weighted-sum method "
-            "(HI = 0.575, VI = 0.584, RI = 0.579, Class III). Replacing the weighted sum by the physics-based probability "
-            f"gives HI = P<sub>f</sub> = {site['pf']:.2f} and RI = {RI_PHYS:.2f}, i.e. <b>Class IV</b>: urgent action. The "
-            "linear weighted sum understates the hazard of this slope because it cannot represent the threshold behaviour "
-            "of FS around 1 (Figure 12)."),
+            "(HI = 0.575, VI = 0.584, RI = 0.579, Class III). With the physics-based probability, "
+            f"HI = P<sub>f</sub> = {site['pf']:.2f} and RI = {RI_PHYS:.2f}, i.e. Class IV. This shift is robust to the "
+            f"Monte Carlo assumptions (P<sub>f</sub> {pf_rng[0]:.2f}–{pf_rng[1]:.2f} across seven variants) and to moderate "
+            f"scoring error (P(Class IV) = {obs[0.1]['P(class IV)']:.2f} if each score has a 10% chance of being one class off). "
+            "It is nonetheless a model output, not a validated finding: the score-based index has not been tested against "
+            "observed landslides (criterion A8), and the RI class limits were originally defined for the weighted score index, "
+            "not for a probability, so mixing the two scales is itself an unvalidated choice."),
           table([["Method", "HI", "VI", "RI", "Class"],
                  ["Weighted sum, slide weights", "0.575", "0.584", "0.579", "III  Medium"],
                  ["HI = P<sub>f</sub> (model v1, uniform ranges)", "0.848", "0.584", "0.703", "IV  High"],
                  ["HI = P<sub>f</sub> (model v2, literature distributions)", f"{site['pf']:.3f}", "0.584", f"{RI_PHYS:.3f}",
                   "IV  High"]],
-                "Case-study risk index under the three hazard formulations.",
+                "Case-study risk index under the three hazard formulations (model outputs, not validated).",
                 col_widths=[7.5 * cm, 2.0 * cm, 2.0 * cm, 2.0 * cm, 3.5 * cm], highlight=[3]),
           figure("F12_risk_plane", "Risk plane RI = √(HI·VI) with class boundaries. The case study moves from Class III "
                  "(weighted sum) to Class IV (physics-based P<sub>f</sub>).", width=0.62),
           PageBreak()]
 
-# 7 Literature, limitations ------------------------------------------------
-story += [P("7  Position in the literature, limitations and next steps", "h1"),
-          P("7.1  Position", "h2"),
+# 7 Audit -----------------------------------------------------------------
+mc = {(r["predictor"], r["subset"]): r for r in AUD["mc_on_cases"]["table"]}
+base_key = "Monte Carlo Pf, base (c'0.45, phi'0.10, rho-0.5)"
+cal = AUD["mc_on_cases"]["calibration"]
+hyb = AUD["mc_on_cases"]["hybrid_lnFS_vs_PfMC"]
+ss = {r["N"]: r for r in AUD["mc_assumptions"]["sample_size"]}
+vd = {v["variant"]: v for v in var}
+w_soil = [v["w_soil"] for v in var]; w_veg = [v["w_vegetation"] for v in var]; w_geo = [v["w_geometry"] for v in var]
+sc = AUD["scoring"]
+est = pd.read_csv(ROOT / "results" / "audit" / "cv_estimators_all.csv", index_col=0)
+grid = AUD["validation"]["domain_grid"]
+story += [P("7  Audit: corrected claims, validation bias, the role of Monte Carlo and scoring", "h1"),
+          P("The analysis was audited after version 2.0 with one question: is every reported number an objective, "
+            "reproducible estimate of how the model would perform on new slopes? Each suspected bias was measured rather than "
+            "argued; all numbers below come from <i>audit/run_audit.py</i> and <i>results/audit/</i>."),
+          P("7.1  Corrected claims", "h2"),
+          table([["Earlier claim (v2.0 or chat summary)", "Problem found", "Corrected statement"],
+                 ["Hybrid AUC 0.903 (soil domain) / 0.906",
+                  "Post-hoc domain; predictions averaged over 5 repeats (ensemble, +0.007); γ and H unconstrained (+0.02–0.04, non-physical)",
+                  f"AUC {pm_all.loc['D_hybrid', 'auc']:.3f} on all cases with a fully constrained model"],
+                 ["Hybrid 'clearly beats an AHP-style index'",
+                  "Baseline A was an equal-weight score designed here; no AHP weights were tested",
+                  f"Hybrid beats a fair logistic baseline by {d_log[0]:.2f} AUC; comparison with AHP is untested"],
+                 ["'16 of 17 acceptance criteria pass'",
+                  "Four passes are true by design; most thresholds were set by this project; the calibration estimator was "
+                  "changed after the per-fold estimate failed",
+                  f"{N_PASS} of {len(acc)} pass ({N_ANALYTIC} analytic), {N_FAIL} fail, {N_PEND} pending; thresholds labelled by basis"],
+                 ["The engine is validated",
+                  "Validation used a global case database with different inputs from the field score sheet",
+                  "Only the Bishop-hybrid classifier is validated; the score-based HI/RI is not (A8)"],
+                 ["P<sub>f</sub> is a probability usable in risk assessment",
+                  f"Raw Monte Carlo P<sub>f</sub> on real slopes: ECE {A7:.2f}, worse than a constant guess",
+                  "P<sub>f</sub> ranks slopes; it needs empirical calibration before use as a frequency"],
+                 ["Sobol' weights are objective and replace AHP weights",
+                  f"Normalised weights move with class definitions: soil {min(w_soil):.2f}–{max(w_soil):.2f}, "
+                  f"vegetation {min(w_veg):.2f}–{max(w_veg):.2f}",
+                  "Judgement moved from weights to class tables; it was reduced and made explicit, not removed"],
+                 ["Bishop matches Taylor within 0.2%", "The 45° case (3.7% error) had been left out of the test",
+                  "0.1–0.2% for 60–90°, 3.7% at 45°"],
+                 ["Case-history AUC compared with published map AUCs",
+                  "Slope-classification AUC and susceptibility-map AUC measure different tasks", "Not compared"]],
+                "Claims corrected by the audit.", col_widths=[4.6 * cm, 6.4 * cm, 5.5 * cm]),
+          P("7.2  Validation bias", "h2"),
+          P(f"<b>Estimator choice.</b> For the adopted hybrid, per-fold mean AUC is {est.loc['D_hybrid', 'auc_fold_mean']:.3f}, "
+            f"the single-pass pooled estimate {est.loc['D_hybrid', 'auc_pooled_single']:.3f} and the 5-repeat averaged estimate "
+            f"{est.loc['D_hybrid', 'auc_pooled_avg5']:.3f}; the last is an ensemble and slightly optimistic, and is no longer "
+            f"reported. Expected calibration error ranges from {est.loc['D_hybrid', 'ece_pooled_avg5']:.3f} to "
+            f"{est.loc['D_hybrid', 'ece_fold_mean']:.3f} depending on the estimator; per-fold ECE is inflated by small folds, "
+            "averaged ECE deflated by ensembling, and the single-pass value is used. "
+            f"<b>Domain choice.</b> Across 48 alternative domain filters, physics-only AUC ranges {grid['auc_physics'][0]:.2f}–"
+            f"{grid['auc_physics'][1]:.2f} and the hybrid {grid['auc_hybrid'][0]:.2f}–{grid['auc_hybrid'][1]:.2f}; the filter used "
+            "earlier was not the most favourable, but physics-only results are clearly sensitive to it. "
+            "<b>Leakage.</b> Random cross-validation overstates AUC by about 0.01–0.02; coarser duplicate grouping lowers "
+            "the hybrid AUC by a further ~0.01, so some near-duplicate leakage probably remains. "
+            "<b>Bootstrap.</b> Resampling whole duplicate groups gives confidence intervals almost identical to case-level "
+            "resampling, so interval widths are not materially understated."),
+          figure("F14_validation_bias", "(a) Reported AUC depends on the estimator and on whether γ and H are constrained. "
+                 "(b) Physics-only and hybrid AUC under 48 alternative domain filters; circles mark the filter used in v2.0. "
+                 "(c) Fair comparison of all five models on all cases."),
+          P("7.3  How Monte Carlo affects the model", "h2"),
+          P("Monte Carlo plays two different roles, and the audit separates them. <b>Inside the score model</b> it converts each "
+            "class into a distribution of FS and hence P<sub>f</sub>. At N = 400 its sampling noise is small "
+            f"(s.d. of the case-study P<sub>f</sub> = {ss[400]['pf_sd']:.3f}) compared with the effect of a 20% chance of "
+            f"mis-scoring each variable (90% interval of P<sub>f</sub> {obs[0.2]['pf_p05']:.2f}–{obs[0.2]['pf_p95']:.2f}). "
+            "The distributional choices that Monte Carlo makes explicit matter unevenly: c'–φ' correlation and COV move the "
+            "normalised weights by about 0.02 or less, whereas the class definitions (v1 uniform ranges versus v2 literature "
+            f"distributions) and the root-cohesion range move them substantially (geometry {min(w_geo):.2f}–{max(w_geo):.2f}, "
+            f"vegetation {min(w_veg):.2f}–{max(w_veg):.2f}). "
+            "<b>On real slopes</b> Monte Carlo P<sub>f</sub> discriminates no better than the deterministic FS it is built on "
+            f"(AUC {mc[(base_key, 'all')]['auc']:.3f} versus {mc[('-FS (ranking only)', 'all')]['auc']:.3f}), and replacing "
+            f"ln FS by P<sub>f</sub> in the hybrid leaves AUC unchanged ({hyb['D_hybrid']['auc_fold_mean']:.3f} versus "
+            f"{hyb['D_hybrid_pfMC']['auc_fold_mean']:.3f}). Its probabilities are poorly calibrated: slopes with "
+            f"P<sub>f</sub> ≤ 0.1 failed {float(cal[0]['observed']):.0%} of the time and slopes with P<sub>f</sub> &gt; 0.9 only "
+            f"{float(cal[-1]['observed']):.0%} (Figure 13a). The value of Monte Carlo is therefore transparent uncertainty "
+            "bookkeeping and a graded output, not additional predictive accuracy; its probabilities become meaningful only "
+            "after calibration against outcomes."),
+          figure("F13_monte_carlo_effect", "(a) Calibration of raw Monte Carlo P<sub>f</sub> and of the hybrid engine on real "
+                 "slopes. (b) Normalised total Sobol' weights under seven Monte Carlo assumption sets. (c) Monte Carlo sampling "
+                 "noise versus the spread caused by a 20% scoring error."),
+          P("7.4  How the score is taken and how scoring error propagates", "h2"),
+          P("A field engineer assigns each variable a class from a written table (Table 1): for example a 45° slope falls in "
+            "geometry class 4 (45–55°). The six scores index one row of a pre-computed table of 15,625 P<sub>f</sub> values, "
+            "which becomes HI; the settlement distance and vegetation scores give VI, and RI = √(HI·VI) gives the class "
+            "(Figure 15a). No weights are applied at this stage: the influence of each variable is already contained in the "
+            "physics. Two consequences follow. First, the result is only as good as the scoring: with a 20% chance of each "
+            f"score being one class off, the case study remains Class IV with probability {obs[0.2]['P(class IV)']:.2f} but "
+            f"falls to Class III with probability {obs[0.2]['P(class III)']:.2f} (Figure 15b). Second, the physics-based and "
+            f"weighted-sum hazards rank configurations similarly (Spearman ρ = {sc['spearman_weightedHI_vs_Pf']:.2f}) yet assign "
+            f"the same RI class in only {sc['class_agreement_weighted_vs_Pf']:.0%} of the 15,625 combinations, with the physics "
+            f"version higher in {sc['share_Pf_class_higher']:.0%}. Which of the two is closer to reality cannot be decided "
+            "without outcome data (A8)."),
+          figure("F15_scoring", "(a) Worked example: from field observations to scores, the P<sub>f</sub> look-up table, HI, "
+                 "VI and the risk class. (b) Probability of each RI class for the case study when every score has a given "
+                 "chance of being mis-assigned by one class."),
+          PageBreak()]
+
+# 8 Literature, limitations, ethics ----------------------------------------
+story += [P("8  Position in the literature, limitations, ethical use and next steps", "h1"),
+          P("8.1  Position", "h2"),
           P("Combining the infinite-slope equation with Monte Carlo sampling is established (SINMAP, TRIGRS-P, HIRESSS, "
             "Landlab). TRIGRS-P improved predictive power by about 10–16% over deterministic TRIGRS (Raia et al., 2014). "
-            "Published AUC values for physically based maps are typically 0.75–0.85, and AHP maps 0.80–0.88. Purely "
-            "statistical and machine-learning maps usually score higher because they are fitted to the inventory on which "
-            "they are evaluated. Physics-informed machine learning has reported large gains, for example selecting "
-            "non-landslide samples from high-FS areas or coupling Scoops3D with random forests. The literature search found "
-            "no study that replaces AHP factor weights by variance-based indices computed from a physical model, nor any "
-            "probabilistic infinite-slope or TRIGRS-P application in Indonesia; both are candidate contributions of this "
-            "work and should be confirmed by a systematic Scopus search."),
-          P("7.2  Limitations", "h2")]
+            "Published susceptibility maps report AUC values on landslide inventories; those values measure a different task "
+            "from the slope-classification AUC in Section 4 and are not compared with it here. The literature search found no "
+            "study that replaces AHP factor weights by variance-based indices computed from a physical model, nor a "
+            "probabilistic infinite-slope or TRIGRS-P application in Indonesia; both are candidate contributions that still "
+            "need confirmation by a systematic Scopus search."),
+          P("8.2  Limitations", "h2")]
 story += bullets([
-    "<b>Static hydrology.</b> Rainfall enters only through a capacity-limited rise of the water table. Transient infiltration "
-    "(Iverson, 2000; TRIGRS), antecedent rainfall and loss of matric suction in unsaturated residual soils are not modelled, "
-    "so the importance of rainfall is a lower bound.",
-    "<b>Class values.</b> Means of soil classes 2–5 are a synthesis anchored on published ranges, not an Indonesian database. "
-    "Upper root-cohesion values for forest (to 25 kPa) are likely high, because measured reinforcement is often 30–50% of "
-    "Wu–Waldron estimates; this inflates the vegetation index (S<sub>T</sub> = 0.31).",
-    "<b>Validation data.</b> The case histories are global, partly rock slopes, and contain label noise. The model has not yet "
-    "been validated on an Indonesian landslide inventory; criterion A8 remains pending.",
-    "<b>Spatial structure.</b> Parameters are sampled independently per slope; spatial correlation (scale of fluctuation "
-    "about 1–2.5 m vertically and 10–40 m horizontally) is not represented.",
-    "<b>Mechanism.</b> Infinite slope applies to shallow translational slides with length/depth ≥ 16–25; rotational, rock "
-    "and flow-type failures require other solvers.",
+    "<b>The field tool is unvalidated.</b> The score-based HI/RI has no outcome data yet (A8, A9). Validation in Section 4 "
+    "concerns a different model with measured inputs, on a global database.",
+    "<b>Probabilities are uncalibrated.</b> Physics-derived P<sub>f</sub> is not a frequency on real slopes (A7 fails).",
+    "<b>Static hydrology.</b> Transient infiltration, antecedent rainfall and loss of suction are not modelled, so the "
+    "importance of rainfall is a lower bound.",
+    "<b>Class definitions carry the judgement.</b> Class means for soils 2–5 and root-cohesion ranges are syntheses of "
+    "published values; they dominate the variance-based weights.",
+    "<b>Data quality.</b> The case database mixes soil, rock and mine slopes, contains conflicting labels and frequently "
+    "disagrees with homogeneous slope mechanics.",
+    "<b>Spatial structure and mechanism.</b> Parameters are sampled independently per slope; infinite slope applies only "
+    "to shallow translational slides (length/depth ≥ 16–25).",
 ])
-story += [P("7.3  Next steps", "h2")]
+story += [P("8.3  Ethical use", "h2"),
+          P("A landslide model influences decisions that affect lives and livelihoods, so its errors are not symmetric: "
+            "a missed unstable slope can cost lives, while a false alarm costs money and trust. The following conditions "
+            "are proposed for any use of this work:")]
 story += bullets([
-    "Spatial validation (criterion A8) with the Samodra (2024) Cyclone Cempaka inventory (743 polygons, CC BY) and the "
-    "BNPB InaRISK hazard index as the official baseline, using spatially blocked cross-validation.",
-    "Calibration of class distributions with local laboratory data (c', φ', γ, K<sub>s</sub>) and SoilKsatDB; "
-    "robustness runs with ±20% class limits and ρ(c', φ') ∈ {0, −0.7}.",
-    "Transient hydrology (Iverson/TRIGRS) with 1–3-day antecedent rainfall and Indonesian intensity–duration thresholds, "
-    "giving trigger-scenario-specific weights.",
-    "Adaptive sample size (N ≥ 100/P<sub>f</sub>) or subset simulation for low-probability slopes; reporting of "
-    "β<sub>R</sub> alongside FS for site decisions.",
+    "Until criteria A8 and A9 pass, outputs are for research and screening only and must not be the sole basis for "
+    "evacuation, relocation or land-use restrictions; every Class IV–V result requires review by a geotechnical engineer.",
+    "Report recall (the share of failures detected) alongside AUC, and choose decision thresholds by the cost of missed "
+    "failures rather than by accuracy.",
+    "Publish the class tables, distributions, code and data with every map, so that assumptions can be checked and "
+    "results reproduced; state which numbers are validated, which are verified only, and which are assumptions.",
+    "Do not present the variance-based weights as assumption-free; report their range under alternative class definitions.",
+    "Respect data licences (Ma et al., 2022 is open access) and do not combine community-level risk classes with personal "
+    "data without consent.",
 ])
+story += [P("8.4  Next steps", "h2")]
+story += bullets([
+    "Spatial validation (A9) with the Samodra (2024) Cyclone Cempaka inventory and the BNPB InaRISK hazard index as the "
+    "official baseline, using spatially blocked cross-validation; record field scores for mapped landslides to test A8.",
+    "Calibrate P<sub>f</sub> against outcomes (isotonic or Platt scaling on held-out data) before it is used as a probability.",
+    "Calibrate class distributions with local laboratory data and SoilKsatDB; report weight ranges under ±20% class limits.",
+    "Add transient hydrology (Iverson/TRIGRS) with 1–3-day antecedent rainfall.",
+])
+
 story += [P("References", "h1")]
 refs = [
     "Brenning, A. (2005). Spatial prediction models for landslide hazards: review, comparison and evaluation. <i>Natural Hazards and Earth System Sciences</i>, 5, 853–862.",

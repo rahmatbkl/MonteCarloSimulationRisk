@@ -1,18 +1,20 @@
-gate,code,description,value,threshold,reference,status
-1 Verification,V1,"Infinite slope, c'=0 dry: FS = tan(phi)/tan(beta)",1.1102230246251565e-16,abs err < 1e-9,Skempton & DeLory (1957),PASS
-1 Verification,V2,"Bishop vs Taylor stability chart (phi=0, beta 60-90 deg)",0.001513974143034401,max rel err <= 5%,Taylor (1937),PASS
-1 Verification,V3,"Bishop, c'=0: converges to tan(phi)/tan(beta)",0.0012060800642174074,rel err <= 2%,Duncan & Wright (2005),PASS
-1 Verification,V4,Bishop vs ACADS benchmark 1(a) (FS ref 0.99),0.0006541670852702433,rel err <= 3%,"Donald & Giam (1989), ACADS",PASS
-1 Verification,V5,FORM vs Monte Carlo (correlated lognormal inputs),0.0007970905978142984,abs diff Pf <= 0.01,Hasofer & Lind (1974),PASS
-2 Numerical,N1,Max 95% CI half-width of Pf per configuration (N=400),0.048765495830290995,<= 0.05,Wilson (1927),PASS
-2 Numerical,N2,Seed stability: mean |dPf| between seeds,0.01610736,<= 0.02,Reproducibility (this protocol),PASS
-2 Numerical,N3,Seed stability: max |dS_T| of Sobol indices,0.0003568561861764241,<= 0.02,"Archer, Saltelli & Sobol (1997)",PASS
-2 Numerical,N4,"Site Pf estimator COV (case study, N=20,000)",0.002855948323380775,<= 0.10,N = (1-Pf)/(COV^2 Pf),PASS
-3 Validation,A1,"Hybrid AUC, grouped CV, soil domain (95% CI lower bound)",0.863873172636531,">= 0.70 (min), point >= 0.80",Hosmer & Lemeshow (2000),PASS
-3 Validation,A2,"Hybrid beats heuristic/AHP-like index (dAUC, CI lower bound)",0.16386433638496056,> 0,Paired bootstrap,PASS
-3 Validation,A3,"Hybrid beats physics-only FS (dAUC, CI lower bound)",0.10249102329778467,> 0,Paired bootstrap,PASS
-3 Validation,A4,Calibration: expected calibration error (pooled OOF),0.05514215122172576,<= 0.10,Guo et al. (2017),PASS
-3 Validation,A5,Brier score (no-skill = 0.25),0.11230004640833609,<= 0.20,Brier (1950),PASS
-3 Validation,A6,Leakage gap: AUC(random CV) - AUC(grouped CV),0.023079633544749956,<= 0.05,Brenning (2005),PASS
-3 Validation,A7,Physical consistency: share of cases where +10% c' raises P(fail),0.0,= 0,Monotone constraints (this engine),PASS
-3 Validation,A8,Spatial/temporal validation on Indonesian landslide inventory,,AUC >= 0.80 on spatial blocks,Reichenbach et al. (2018) SQL>=5; pending data (Samodra 2024),PENDING
+gate,code,description,value,threshold,reference,basis,status
+1 Verification,V1,"Infinite slope, c'=0 dry: FS = tan(phi)/tan(beta)",1.1102230246251565e-16,abs err < 1e-9,Skempton & DeLory (1957),analytic,PASS
+1 Verification,V2,"Bishop vs Taylor chart, phi=0, beta 45/60/75/90 deg (errors 3.7%, 0.1%, 0.2%, 0.1%)",0.037265009297066144,max rel err <= 5%,Taylor (1937); 45 deg limited by search depth,literature,PASS
+1 Verification,V3,"Bishop, c'=0: converges to tan(phi)/tan(beta)",0.0012060800642174074,rel err <= 2%,Duncan & Wright (2005),analytic,PASS
+1 Verification,V4,"Bishop vs ACADS 1(a) (reference FS ~1.00, recalled, unverified)",0.009352374585582468,rel err <= 3%,Donald & Giam (1989),literature,PASS
+1 Verification,V5,"FORM vs Monte Carlo (one test case, Pf ~0.97)",0.0007970905978142984,abs diff Pf <= 0.01,Hasofer & Lind (1974),project-set,PASS
+1 Verification,V6,Monotone constraints implemented: +10% c' never raises P(fail),0.0,= 0,Guaranteed by construction (not a validation),analytic,PASS
+2 Numerical,N1,Max 95% CI half-width of Pf per configuration (N=400),0.048765495830290995,<= 0.05,Wilson (1927); fixed by choice of N,analytic,PASS
+2 Numerical,N2,Seed stability: mean |dPf| between seeds,0.01610736,<= 0.02,Reproducibility,project-set,PASS
+2 Numerical,N3,Seed stability: max |dS_T| of Sobol indices,0.0003568561861764241,<= 0.02,"Archer, Saltelli & Sobol (1997)",project-set,PASS
+2 Numerical,N4,"Site Pf estimator COV (case study, N=20,000)",0.002855948323380775,<= 0.10,N = (1-Pf)/(COV^2 Pf),literature,PASS
+3 Validation,A1,"Hybrid AUC, grouped CV, ALL cases (group-bootstrap 95% CI lower bound)",0.8315667742384796,>= 0.70 and point >= 0.80,Hosmer & Lemeshow (2000),literature,PASS
+3 Validation,A2,"Hybrid beats logistic regression on raw inputs (dAUC, CI lower bound)",0.09296150751010047,> 0,Fair statistical baseline,project-set,PASS
+3 Validation,A3,"Hybrid beats physics-only FS (dAUC, CI lower bound)",0.17529551529736737,> 0,Paired group bootstrap,project-set,PASS
+3 Validation,A4,Hybrid calibration: ECE on single-pass OOF predictions,0.07682268944874358,<= 0.10,Guo et al. (2017),project-set,PASS
+3 Validation,A5,Hybrid Brier score (no-skill = 0.25),0.1514120208369631,<= 0.20,Brier (1950),project-set,PASS
+3 Validation,A6,Leakage gap: AUC(random CV) - AUC(grouped CV),0.013720722028648713,<= 0.05,Brenning (2005),project-set,PASS
+3 Validation,A7,"Physics Monte Carlo Pf is a calibrated probability (ECE of raw Pf, no fitting)",0.3311826086956523,<= 0.10,Probability must mean frequency,project-set,FAIL
+3 Validation,A8,Score-based HI (6 field scores -> Pf) validated against observed landslides,,AUC >= 0.80 and ECE <= 0.10,No outcome data with field scores exists yet,literature,PENDING
+3 Validation,A9,Spatial/temporal validation on an Indonesian landslide inventory,,AUC >= 0.80 on spatial blocks,Reichenbach et al. (2018) SQL >= 5; data: Samodra (2024),literature,PENDING

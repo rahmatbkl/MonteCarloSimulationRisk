@@ -30,6 +30,7 @@ class Criterion:
     threshold: str
     passed: object          # True / False / None (= PENDING)
     reference: str
+    basis: str = "project-set"   # asal ambang: standard | literature | project-set | analytic
 
     @property
     def status(self):
@@ -47,15 +48,19 @@ def to_frame(criteria):
 
 
 def to_markdown(criteria, title="Acceptance report"):
-    lines = [f"# {title}", "", "| Gate | Code | Criterion | Value | Threshold | Status | Reference |",
-             "|---|---|---|---|---|---|---|"]
+    lines = [f"# {title}", "", "| Gate | Code | Criterion | Value | Threshold | Basis | Status | Reference |",
+             "|---|---|---|---|---|---|---|---|"]
     for c in criteria:
         value = f"{c.value:.4g}" if isinstance(c.value, (int, float, np.floating)) and np.isfinite(c.value) else "-"
-        lines.append(f"| {c.gate} | {c.code} | {c.description} | {value} | {c.threshold} | "
+        lines.append(f"| {c.gate} | {c.code} | {c.description} | {value} | {c.threshold} | {c.basis} | "
                      f"**{c.status}** | {c.reference} |")
     n_pass = sum(c.status == "PASS" for c in criteria)
     lines += ["", f"Passed {n_pass} / {len(criteria)} criteria "
-              f"({sum(c.status == 'PENDING' for c in criteria)} pending)."]
+              f"({sum(c.status == 'FAIL' for c in criteria)} failed, "
+              f"{sum(c.status == 'PENDING' for c in criteria)} pending).",
+              "", "Basis: *standard/literature* = threshold taken from a cited source; *project-set* = "
+              "threshold chosen by this project (not an external standard); *analytic* = follows "
+              "mathematically from the design, so it is a design check rather than a test."]
     return "\n".join(lines)
 
 
@@ -71,3 +76,26 @@ def paired_bootstrap_auc_diff(y, p_a, p_b, n_boot=2000, seed=0):
             continue
         diffs.append(roc_auc_score(y[i], p_a[i]) - roc_auc_score(y[i], p_b[i]))
     return float(np.mean(diffs)), float(np.quantile(diffs, 0.025)), float(np.quantile(diffs, 0.975))
+
+
+def group_bootstrap_auc(y, groups, p, q=None, n_boot=2000, seed=0):
+    """
+    AUC (atau selisih AUC p - q) dengan resampling SELURUH kelompok kasus
+    hampir-duplikat, sehingga CI tidak terlalu sempit karena duplikat.
+    Return (mean, ci_low, ci_high).
+    """
+    from sklearn.metrics import roc_auc_score
+    rng = np.random.default_rng(seed)
+    y, groups, p = map(np.asarray, (y, groups, p))
+    uniq = np.unique(groups)
+    members = {g: np.flatnonzero(groups == g) for g in uniq}
+    vals = []
+    for _ in range(n_boot):
+        idx = np.concatenate([members[g] for g in rng.choice(uniq, len(uniq))])
+        if len(set(y[idx])) < 2:
+            continue
+        v = roc_auc_score(y[idx], p[idx])
+        if q is not None:
+            v -= roc_auc_score(y[idx], np.asarray(q)[idx])
+        vals.append(v)
+    return float(np.mean(vals)), float(np.quantile(vals, 0.025)), float(np.quantile(vals, 0.975))
