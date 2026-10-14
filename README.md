@@ -15,10 +15,33 @@ dan catatan kritis ada di **[docs/FORMULASI_MODEL.md](docs/FORMULASI_MODEL.md)**
 
 ```bash
 pip install -r requirements.txt
-python run_pipeline.py            # simulasi penuh (~15 detik)
-python run_pipeline.py --quick    # versi kecil untuk uji cepat
+python run_pipeline.py            # model v1 (kerangka slide), ~15 detik
+python run_engine.py              # engine v2 + protokol penerimaan, ~2 menit
+python report/make_figures.py     # 12 gambar kualitas publikasi (300 dpi)
+python report/build_report.py     # laporan PDF teknis
 python -m pytest -q               # uji fisika & reproduksi angka slide
 ```
+
+## Engine v2 (hibrida fisika + machine learning)
+
+| Komponen | File |
+|---|---|
+| Distribusi parameter dari literatur (lognormal c', normal terpotong phi', copula rho=-0.5, hujan kumulatif) | `landslide_risk/parameters_v2.py` |
+| Bishop Simplified + pencarian lingkaran kritis (terverifikasi vs Taylor & ACADS) | `landslide_risk/bishop.py` |
+| Pf, Wilson CI, beta, FORM | `landslide_risk/reliability.py` |
+| Sobol eksak pada ruang skor 5^6 | `landslide_risk/variance.py` |
+| 575 kasus lereng nyata (Ma et al. 2022) + pengelompokan duplikat | `landslide_risk/case_data.py` |
+| Engine hibrida (gradient boosting monoton) + CV berkelompok | `landslide_risk/engine.py` |
+| Metrik (AUC, Brier, ECE, TSS) dan 17 kriteria penerimaan | `landslide_risk/metrics.py`, `acceptance.py` |
+
+Hasil: **16 dari 17 kriteria lolos** (`results/engine/acceptance.md`). Kriteria yang belum
+adalah validasi spasial pada inventaris longsor Indonesia. AUC (CV berkelompok, domain
+lereng tanah): heuristik/AHP-like 0,68, fisika saja 0,76, **hibrida 0,90**.
+
+Dokumen:
+- `report/Landslide_Risk_Engine_Report.pdf`: laporan teknis (konsep, fisika, gradien & matriks, engine, penerimaan)
+- `reports/Monte Carlo pengganti AHP longsor.md`: kajian literatur
+- `docs/FORMULASI_MODEL.md`: formulasi v1 dan kritik
 
 ## Struktur
 

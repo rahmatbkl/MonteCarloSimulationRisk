@@ -49,7 +49,7 @@ def _candidate_circles(H, beta_rad, n_exit=6, n_entry=16, n_sag=14):
     return X1, X2, xc, yc, R
 
 
-def bishop_fs(gamma, c, phi_deg, beta_deg, H, ru, n_slices=40, n_iter=30):
+def bishop_fs(gamma, c, phi_deg, beta_deg, H, ru, n_slices=40, n_iter=30, return_all=False):
     """
     FS minimum (lingkaran kritis) untuk satu lereng homogen.
     Return (fs_min, info_lingkaran_kritis).
@@ -92,7 +92,11 @@ def bishop_fs(gamma, c, phi_deg, beta_deg, H, ru, n_slices=40, n_iter=30):
              & np.all(~loaded | (m_alpha >= 0.2), axis=1))
     fs = np.where(valid, fs, np.inf)
     k = int(np.argmin(fs))
-    return float(fs[k]), {"xc": xc[k], "yc": yc[k], "R": R[k], "x_exit": x1[k], "x_entry": x2[k]}
+    info = {"xc": xc[k], "yc": yc[k], "R": R[k], "x_exit": x1[k], "x_entry": x2[k],
+            "slices_x": x[k], "slices_base": y_base[k], "slices_h": h[k]}
+    if return_all:   # untuk visualisasi: semua lingkaran kandidat
+        info["all"] = {"xc": xc, "yc": yc, "R": R, "x1": x1, "x2": x2, "fs": fs}
+    return float(fs[k]), info
 
 
 def bishop_fs_many(df):
