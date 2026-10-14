@@ -1,0 +1,61 @@
+{
+  "bobot_simulasi_ini": {
+    "scores": {
+      "soil": 3,
+      "geometry": 4,
+      "groundwater": 4,
+      "rainfall": 4,
+      "seismic": 1,
+      "vegetation": 2
+    },
+    "distance_score": 4,
+    "vi_raw": 3.334,
+    "vi": 0.5835,
+    "site_pf": {
+      "pf": 0.84805,
+      "ci_low": 0.843008084209712,
+      "ci_high": 0.8529582345797749,
+      "fs_median": 0.6907567665107833,
+      "n_mc": 20000
+    },
+    "weighted": {
+      "hi": 0.5588960724666684,
+      "ri": 0.5710655463992736,
+      "class": "III",
+      "name": "Sedang",
+      "action": "Wajib investigasi lapangan.",
+      "hi_raw": 3.2355842898666736,
+      "contribution": {
+        "soil": 1.0616,
+        "geometry": 1.7334,
+        "groundwater": 0.1379,
+        "rainfall": 0.0024,
+        "seismic": 0.0551,
+        "vegetation": 0.2451
+      }
+    },
+    "physics": {
+      "hi": 0.84805,
+      "ri": 0.7034466397673672,
+      "class": "IV",
+      "name": "Tinggi",
+      "action": "Tindakan segera; pertimbangkan relokasi."
+    }
+  },
+  "bobot_slide_asli": {
+    "hi": 0.575,
+    "ri": 0.5792344085083344,
+    "class": "III",
+    "name": "Sedang",
+    "action": "Wajib investigasi lapangan.",
+    "hi_raw": 3.3,
+    "contribution": {
+      "soil": 1.614,
+      "geometry": 1.492,
+      "groundwater": 0.064,
+      "rainfall": 0.004,
+      "seismic": 0.018,
+      "vegetation": 0.108
+    }
+  }
+}
