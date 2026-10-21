@@ -1,6 +1,6 @@
 # Serah-terima proyek: Landslide Risk Index berbasis Monte Carlo + fisika
 
-**Tanggal paket:** 21 Oktober 2026
+**Tanggal paket:** 21 Oktober 2026 (diperbarui setelah verifikasi referensi dan hidrologi transien)
 **Repo:** `rahmatbkl/MonteCarloSimulationRisk`, branch `claude/keen-planck-y8eq2h`
 
 Dokumen ini merangkum seluruh pemahaman, keputusan, hasil, koreksi dan pekerjaan yang belum selesai, supaya proyek bisa dilanjutkan di komputer lokal tanpa membaca ulang percakapan.
@@ -38,10 +38,11 @@ pip install -r requirements.txt          # numpy scipy scikit-learn pandas matpl
 python run_pipeline.py                   # model v1 (reproduksi kerangka slide), ~15 detik
 python run_engine.py                     # engine v2 + protokol penerimaan, ~3 menit
 python audit/run_audit.py                # audit bias & efek Monte Carlo, ~9 menit
+python audit/run_hydrology.py            # statik vs transien + uji plausibilitas I–D, ~15 detik
 python report/make_figures.py            # 15 gambar (300 dpi)
 python report/build_report.py            # report/Landslide_Risk_Engine_Report.pdf
 python report/build_audit_pdf.py         # report/Audit_Report.pdf
-python -m pytest -q                      # 25 tes
+python -m pytest -q                      # 26 tes
 ```
 
 `run_engine.py` membutuhkan data kasus lereng. Data ini sudah ada di `data/slope_cases_ma2022.csv`. Bila dihapus, data diunduh ulang otomatis dari PMC (Ma et al. 2022).
@@ -65,7 +66,11 @@ python -m pytest -q                      # 25 tes
 | `landslide_risk/engine.py` | Engine hibrida (gradient boosting **monoton penuh**) + 4 pembanding + CV berkelompok |
 | `landslide_risk/case_mc.py` | Pf Monte Carlo per kasus nyata |
 | `landslide_risk/metrics.py`, `acceptance.py` | AUC, Brier, ECE, TSS; 19 kriteria penerimaan; group bootstrap |
-| `landslide_risk/hydrology.py` | **BARU**: hidrologi transien Iverson (2000) + solver Crank–Nicolson untuk verifikasi |
+| `landslide_risk/hydrology.py` | Hidrologi transien Iverson (2000)/TRIGRS (D̂ = 4D₀/cos²α, bentuk terkoreksi) + solver Crank–Nicolson; opsi `hydrology="transient"` di `parameters_v2` |
+| `audit/run_hydrology.py` | Statik vs transien; ambang I–D model vs ambang empiris |
+| `docs/HIDROLOGI_TRANSIEN.md` | Status, persamaan, verifikasi, hasil hidrologi |
+| `docs/CARA_MODEL_DICEK.md` | Matriks semua pengecekan (verifikasi, numerik, validasi, plausibilitas) |
+| `docs/VERIFIKASI_REFERENSI.md` | Ringkasan verifikasi 151 butir sitasi; rinciannya di `research_notes/Verifikasi referensi/` |
 | `audit/run_audit.py` | Audit: integritas data, bias validasi, efek Monte Carlo, ketidakpastian skoring |
 | `report/` | Skrip gambar dan PDF, plus 2 PDF jadi |
 | `results/` | `results/` (v1), `results/engine/` (v2), `results/audit/` |
@@ -73,7 +78,7 @@ python -m pytest -q                      # 25 tes
 | `docs/AUDIT.md` | Audit lengkap (juga tersedia sebagai PDF) |
 | `reports/Monte Carlo pengganti AHP longsor.md` | Kajian literatur (Bahasa Indonesia) |
 | `research_notes/` | Catatan riset mentah 5 topik (sitasi dan URL) |
-| `tests/` | 25 tes (fisika, reproduksi slide, pengaman audit, hidrologi) |
+| `tests/` | 26 tes (fisika, reproduksi slide, pengaman audit, hidrologi) |
 
 ---
 
@@ -92,7 +97,8 @@ python -m pytest -q                      # 25 tes
    - Rentang kelas di slide salah tulis.
 5. **Engine hibrida** diuji pada 575 kasus lereng nyata dengan validasi silang berkelompok (kasus hampir-duplikat tidak boleh terpisah antara data latih dan uji).
 6. **Audit (14 Okt)** mengoreksi klaim yang berlebihan. Lihat bagian 6.
-7. **Hidrologi transien (21 Okt)** sudah diimplementasikan dan diverifikasi, tetapi **belum** dipasang ke Monte Carlo skor. Lihat bagian 7.
+7. **Hidrologi transien (21 Okt)** diimplementasikan, diverifikasi, dan dipasang ke Monte Carlo skor sebagai opsi. Lihat bagian 7.
+8. **Verifikasi referensi (21 Okt):** 151 butir dicek; 23 dikoreksi, 7 klaim tidak didukung. Koreksi sudah diterapkan ke laporan, kode dan kajian. Lihat bagian 8.
 
 ---
 
@@ -143,41 +149,60 @@ python -m pytest -q                      # 25 tes
 
 ## 7. Hidrologi: status transien
 
-- **Sebelumnya (masih dipakai di v1/v2):** statik. Rumusnya m = min(1, m₀ + min(P, Ks·D)/(n_e·z)), yaitu neraca air sekali langkah. Tidak ada waktu, difusi tekanan, respons pasca-hujan, maupun suction. Karena itu bobot hujan selalu kecil, dan angka itu harus dibaca sebagai **batas bawah**.
-- **Sekarang tersedia** `landslide_risk/hydrology.py`, yaitu solusi Iverson (2000), dasar dari TRIGRS:
-  - ψ(Z,t) = (Z − d)·β + Z·(Iz/Ks)·[R(t*) − R(t* − T*)], dengan R(t*) = √(t*/π)·e^(−1/t*) − erfc(1/√t*).
-  - t* = t·D̂/Z², D̂ = 4·D₀·cos²α.
-  - Batasan gaya TRIGRS: Iz ≤ Ks (kelebihan hujan jadi limpasan) dan ψ ≤ β·Z.
-  - FS dicari pada waktu kritis: t = D × {1; 1,25; 1,5; 2; 3; 4; 6}.
-  - Konversi ke model FS: m = ψ / (z·cos²β).
-- **Verifikasi:**
-  - Solusi analitik dibandingkan dengan solver numerik independen (Crank–Nicolson): selisih ≤ 0,7 mm (≈ 1%).
-  - Tes juga memeriksa batas R, kondisi tanpa hujan, limpasan, batas tekanan, dan puncak tekanan di kedalaman yang terjadi setelah hujan berhenti.
-- **Belum selesai:**
-  1. Nilai difusivitas D₀ per kelas tanah (D₀ = Ks/Ss) dari literatur. Sedang ditelusuri.
-  2. Pasang opsi `hydrology="transient"` ke `parameters_v2` dan Monte Carlo skor; bandingkan bobot dan Pf statik vs transien.
-  3. Uji plausibilitas: kurva ambang intensitas–durasi (I–D) dari model dibandingkan dengan ambang empiris Jawa (Hidayat et al. 2019; Yuniawan et al. 2022). Persamaan ambang masih harus diverifikasi dulu.
-  4. Validasi temporal: tanggal kejadian NASA Global Landslide Catalog (355 titik Indonesia) + hujan GPM IMERG/CHIRPS.
-  5. Zona tak jenuh (suction, opsi Gardner di TRIGRS) dan dasar kedap pada kedalaman terbatas belum dimodelkan.
+Rincian ada di `docs/HIDROLOGI_TRANSIEN.md`.
+
+**Status.**
+- **Statik** tetap menjadi default, supaya hasil yang sudah dilaporkan tidak berubah diam-diam.
+- **Transien** tersedia lewat `hydrology="transient"`.
+- **Persamaan transien:**
+  - ψ(Z,t) = (Z − d)·β + Z·(Iz/Ks)·[R(t*) − R(t* − T*)].
+  - D̂ = **4·D₀ / cos²α**. Iverson (2000) mencetak 4·D₀·cos²α, yang **salah**; bentuk yang benar dikonfirmasi oleh manual TRIGRS 2008 hlm. 25 dan kode `iverson.f95`.
+  - Batasan: Iz ≤ Ks dan ψ ≤ β·Z.
+  - FS diambil minimum selama dan setelah hujan.
+- **D₀** terikat pada Ks: log₁₀(D₀/Ks) ~ U(log 5, log 200), sesuai rentang aplikasi TRIGRS yang terbit.
+
+**Verifikasi.**
+- Dibandingkan dengan solver Crank–Nicolson: selisih ≤ 0,7 mm.
+- Dibandingkan dengan bentuk deret TRIGRS: identik. Uji ini yang menjaga konvensi D̂.
+- Lima uji sifat lainnya lolos.
+
+**Hasil.**
+- Statik vs transien hampir sama: rata-rata Pf 0,628 vs 0,631; Pf studi kasus 0,860 vs 0,866; bobot hujan 0,012 vs 0,007.
+- Penyebabnya, Ks realistis (0,4–11 mm/jam) membuat hujan per kejadian sebagian besar menjadi limpasan, dan air anteseden sudah terwakili oleh X3.
+
+**Uji plausibilitas I–D.**
+- Untuk tanah permeabel dan durasi ≥ 12 jam, ambang model berada di antara ambang Guzzetti (2008) dan ambang Banjarmangu, dekat ambang 1–3 hari Hidayat (2019) dan Yuniawan (2022).
+- Untuk hujan singkat atau tanah lempung, model tidak bisa memicu longsor (batasan nyata).
+- D₀ menggeser ambang 3–8×, sehingga D₀ adalah parameter yang paling perlu dikalibrasi.
+
+**Belum.**
+- Zona tak jenuh (suction, opsi Gardner).
+- Dasar kedap pada kedalaman terbatas.
+- Aliran lateral.
+- **Validasi temporal**: NASA GLC punya 151 kejadian hujan di Indonesia dengan akurasi ≤ 5 km, yang bisa dipasangkan dengan GPM IMERG/CHIRPS.
 
 ---
 
 ## 8. Verifikasi referensi: status
 
-Saat paket ini dibuat, empat penelusuran **sedang berjalan** dan hasilnya belum masuk ke `research_notes/Verifikasi referensi/`. Cakupannya:
-1. Semua referensi di laporan PDF (nilai Taylor Ns, ACADS 1(a), Whitman & Bailey, Hammah et al., SNI 8460, sitasi "Stevens et al. 2006" yang meragukan, dan lainnya).
-2. Kajian literatur, bagian 1.
-3. Kajian literatur, bagian 2 dan dataset/URL.
-4. Referensi hidrologi transien, nilai D₀, dan ambang hujan Indonesia.
+Rincian ada di `docs/VERIFIKASI_REFERENSI.md` dan `research_notes/Verifikasi referensi/`.
 
-Item yang **sudah diketahui belum terverifikasi** (jangan dikutip sebelum dicek):
-- Tabel FS SNI 8460:2017. Sejauh ini hanya dari sumber sekunder: 1,5 statik, 1,3 sementara, 1,1 seismik.
-- FS referensi ACADS 1(a) (diingat ≈ 1,00).
-- Sitasi "Stevens et al. (2006)" untuk kohesi akar.
-- Atribusi AUC La Liboriana 0,60/0,95.
-- Nilai ρ c′–φ′ dari Lumb dan Cherubini.
-- Persamaan ambang hujan Guzzetti 2008, Banjarmangu, dan Samigaluh.
-- Isi beberapa rujukan klasik yang hanya diingat: SINMAP, PISA-m, Fell 2008, Corominas 2014, Feizizadeh & Blaschke 2014.
+**Hasil.** Dari 151 butir: 112 terverifikasi, 23 dikoreksi, 7 klaim tidak didukung, 9 tidak bisa diakses.
+
+**Koreksi terpenting:**
+1. Konvensi D̂ Iverson.
+2. SNI 8460: angka 1,5/1,3 untuk **batuan**. Lereng tanah memakai FS 1,25–≥2,0 menurut ketidakpastian dan konsekuensi. Pseudo-statik > 1,1, dengan kh = 0,5·PGA.
+3. Hammah et al. (2004): pemotongan distribusi mengubah Pf.
+4. Judul dan penulis Milledge (2012), Stevens (2006) dan Samodra (2024).
+5. Lumb (1970) justru menyatakan c dan φ **independen**; nilai ρ = −0,5 kini berstatus asumsi.
+6. Hujan 300–600 mm adalah hujan anteseden 30 hari (Hadmoko et al., 2017), bukan per kejadian.
+7. Beberapa angka AUC dan studi di kajian literatur.
+
+**Masih belum terverifikasi:**
+- Isi spesifik Fell (2008), Corominas (2014) dan Liu & Wu (2008).
+- Nilai ρ dari Lumb dan Cherubini; klaim Wang et al. (2024) "+36,7%"; nilai kh dari Seed (1979).
+- Atribusi m_α < 0,2 ke Whitman & Bailey.
+- Detail InaRISK.
 
 ---
 
@@ -186,10 +211,10 @@ Item yang **sudah diketahui belum terverifikasi** (jangan dikutip sebelum dicek)
 1. **Data lapangan:** catat skor 6 variabel di lokasi longsor yang terpetakan dan di lereng stabil pembanding. Hanya cara ini yang bisa menguji kriteria A8.
 2. **Validasi spasial (A9)** dengan inventaris Samodra (2024) Cyclone Cempaka (Mendeley doi:10.17632/vrtx3w6mjd.1, CC BY), memakai CV berblok spasial. Pembanding resmi: InaRISK BNPB.
 3. **Kalibrasi Pf** (isotonic/Platt) pada data hasil ketika data tersedia. Ini memperbaiki kriteria A7.
-4. **Selesaikan hidrologi transien** (bagian 7, butir 1–4).
+4. **Validasi temporal hidrologi transien** dan kalibrasi D₀ (bagian 7).
 5. **Kalibrasi tabel kelas** dengan data uji lab lokal dan SoilKsatDB, lalu laporkan rentang bobot pada batas kelas ±20%.
 6. **Studi antar-pengamat:** beberapa engineer menilai lereng yang sama untuk mengukur galat skoring yang sebenarnya.
-7. **Selesaikan verifikasi referensi** (bagian 8) dan perbarui sitasi di laporan.
+7. **Cek butir referensi yang masih belum terverifikasi** (bagian 8) bila teks lengkapnya bisa diakses.
 
 ---
 

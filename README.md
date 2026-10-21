@@ -18,7 +18,8 @@ pip install -r requirements.txt
 python run_pipeline.py            # model v1 (kerangka slide), ~15 detik
 python run_engine.py              # engine v2 + protokol penerimaan, ~2 menit
 python audit/run_audit.py         # audit bias & efek Monte Carlo, ~9 menit
-python report/make_figures.py     # 15 gambar kualitas publikasi (300 dpi)
+python audit/run_hydrology.py     # hidrologi statik vs transien + uji I-D
+python report/make_figures.py     # 16 gambar kualitas publikasi (300 dpi)
 python report/build_report.py     # laporan PDF teknis
 python -m pytest -q               # uji fisika & reproduksi angka slide
 ```
@@ -55,7 +56,11 @@ longsor; validasi spasial Indonesia). Lihat `docs/AUDIT.md`.
 > evakuasi/relokasi. Setiap hasil Kelas IV–V perlu ditinjau ahli geoteknik.
 
 Dokumen:
+- `HANDOVER.md`: ringkasan seluruh status proyek (mulai dari sini)
 - `docs/AUDIT.md`: audit kesalahan, bias validasi, peran Monte Carlo dan skoring
+- `docs/HIDROLOGI_TRANSIEN.md`: hidrologi transien (Iverson/TRIGRS), verifikasi dan hasil
+- `docs/CARA_MODEL_DICEK.md`: semua pengecekan model
+- `docs/VERIFIKASI_REFERENSI.md`: hasil verifikasi 151 butir sitasi
 - `report/Landslide_Risk_Engine_Report.pdf`: laporan teknis (konsep, fisika, gradien & matriks, engine, penerimaan, audit)
 - `reports/Monte Carlo pengganti AHP longsor.md`: kajian literatur
 - `docs/FORMULASI_MODEL.md`: formulasi v1 dan kritik

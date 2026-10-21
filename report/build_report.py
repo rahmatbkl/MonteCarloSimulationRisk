@@ -152,6 +152,7 @@ MODEL_NAMES = {"A_heuristic": "A  Equal-weight score index (not AHP)", "B_physic
 N_PASS, N_FAIL, N_PEND = (acc.status == "PASS").sum(), (acc.status == "FAIL").sum(), (acc.status == "PENDING").sum()
 N_ANALYTIC = ((acc.status == "PASS") & (acc.basis == "analytic")).sum()
 A7 = acc.set_index("code").loc["A7", "value"]
+HY = pd.read_csv(ROOT / "results" / "hydrology" / "static_vs_transient.csv").set_index("hydrology")
 
 # --------------------------------------------------------------------------
 # Story
@@ -264,6 +265,19 @@ story += [P("2  Mathematical and physical formulation", "h1"),
           equation(r"m=\min\left(1,\;m_0+\frac{\min(P,\;K_s D)}{n_e\,z}\right)"),
           P("Roots reinforce the slip plane only where they cross it:"),
           equation(r"c_{r,\mathrm{eff}}=c_r\,\min\left(1,\;d_{\mathrm{root}}/H\right),\qquad k_h=0.5\,\mathrm{PGA}/g"),
+          P("<b>Transient option (Iverson 2000; TRIGRS).</b> Equation (2) is a one-step water balance without time. A "
+            "transient alternative solves the linearised Richards equation for a near-saturated soil as pressure "
+            "diffusion. For rain of intensity I<sub>z</sub> ≤ K<sub>s</sub> lasting T, the pressure head at vertical depth Z "
+            "and time t is"),
+          equation(r"\psi(Z,t)=(Z-d)\,\beta+Z\,\frac{I_z}{K_s}\left[R(t^*)-R(t^*-T^*)\right],\quad "
+                   r"R(t^*)=\sqrt{t^*/\pi}\,e^{-1/t^*}-\mathrm{erfc}\!\left(1/\sqrt{t^*}\right),\quad "
+                   r"t^*=\frac{t\,\hat D}{Z^2},\ \hat D=\frac{4D_0}{\cos^2\alpha}"),
+          P("with β = cos²α − I<sub>LT</sub>/K<sub>s</sub>, ψ ≤ βZ, R(t* ≤ 0) = 0 and m = ψ/(z cos²β) passed to "
+            "equation (1); FS is evaluated during and after the rain and the minimum is kept. Iverson (2000) printed "
+            "D̂ = 4D<sub>0</sub>cos²α; the corrected form 4D<sub>0</sub>/cos²α is used here, as in the TRIGRS manual "
+            "(Baum et al., 2008, p. 25) and the official TRIGRS code. D<sub>0</sub> is tied to K<sub>s</sub> through "
+            "log<sub>10</sub>(D<sub>0</sub>/K<sub>s</sub>) ~ U(log 5, log 200), the range used in published TRIGRS applications. "
+            "Unsaturated suction and a finite impermeable base are not modelled."),
           figure("F03_mechanics", "(a) Forces on a vertical slice of an infinite slope. (b) Critical slip circle and slices "
                  "found by the Bishop simplified search for a failed case history (FS = 0.89)."),
           P("2.3  Bishop simplified method (deep circular failure)", "h2"),
@@ -585,6 +599,27 @@ story += [P("7  Audit: corrected claims, validation bias, the role of Monte Carl
           figure("F15_scoring", "(a) Worked example: from field observations to scores, the P<sub>f</sub> look-up table, HI, "
                  "VI and the risk class. (b) Probability of each RI class for the case study when every score has a given "
                  "chance of being mis-assigned by one class."),
+          P("7.5  Transient hydrology: effect and plausibility", "h2"),
+          P(f"Replacing the static water balance by the transient Iverson/TRIGRS solution changes little in the score model: "
+            f"mean P<sub>f</sub> over the 15,625 combinations moves from {HY.loc['static', 'mean_pf']:.3f} to "
+            f"{HY.loc['transient', 'mean_pf']:.3f}, the case-study P<sub>f</sub> from {HY.loc['static', 'case_pf']:.3f} to "
+            f"{HY.loc['transient', 'case_pf']:.3f}, and the normalised rainfall weight from {HY.loc['static', 'w_rainfall']:.3f} "
+            f"to {HY.loc['transient', 'w_rainfall']:.3f} (Figure 16c). With class conductivities of 0.4–11 mm/h most event "
+            "rain becomes runoff in both models, and antecedent wetness is already carried by X<sub>3</sub>. "
+            "As a plausibility check, critical intensity–duration curves were computed for a marginally stable slope in each "
+            "soil class (pre-rain FS = 1.2) and compared with verified empirical thresholds (Figure 16b). For permeable soils "
+            "and durations of 12 h or more the model thresholds fall between the global threshold of Guzzetti et al. (2008) "
+            "and the Banjarmangu threshold (Irawan et al., 2019), close to the Indonesian 1- and 3-day thresholds of "
+            "Hidayat et al. (2019) and Yuniawan et al. (2022). For short intense rain and low-permeability soils the model "
+            "cannot trigger failure, whereas real slopes do; preferential flow, suction loss and run-on are missing. The "
+            "thresholds move by a factor of 3–8 across the plausible D<sub>0</sub> range, so diffusivity is the parameter "
+            "most in need of calibration. This is a plausibility check, not a validation: temporal validation against dated "
+            "Indonesian landslides (NASA Global Landslide Catalog, 151 rain-triggered events with ≤ 5 km location accuracy) "
+            "and satellite rainfall remains to be done."),
+          figure("F16_hydrology", "(a) Pressure head at the slip plane (solid) and mid-depth (dashed) during and after 24 h of "
+                 "rain for three diffusivities, permeable reference slope. (b) Model critical intensity–duration curves "
+                 "(solid D<sub>0</sub>/K<sub>s</sub> = 50, dotted 200) against verified empirical thresholds. (c) Normalised "
+                 "Sobol' weights with static and transient hydrology."),
           PageBreak()]
 
 # 8 Literature, limitations, ethics ----------------------------------------
@@ -603,8 +638,9 @@ story += bullets([
     "<b>The field tool is unvalidated.</b> The score-based HI/RI has no outcome data yet (A8, A9). Validation in Section 4 "
     "concerns a different model with measured inputs, on a global database.",
     "<b>Probabilities are uncalibrated.</b> Physics-derived P<sub>f</sub> is not a frequency on real slopes (A7 fails).",
-    "<b>Static hydrology.</b> Transient infiltration, antecedent rainfall and loss of suction are not modelled, so the "
-    "importance of rainfall is a lower bound.",
+    "<b>Hydrology.</b> A transient Iverson/TRIGRS solution is implemented and verified, but unsaturated suction, a finite "
+    "impermeable base, lateral flow and run-on are not modelled; event-rain effects remain small and short intense "
+    "storms cannot trigger failure in the model. Temporal validation is pending.",
     "<b>Class definitions carry the judgement.</b> Class means for soils 2–5 and root-cohesion ranges are syntheses of "
     "published values; they dominate the variance-based weights.",
     "<b>Data quality.</b> The case database mixes soil, rock and mine slopes, contains conflicting labels and frequently "
@@ -633,24 +669,30 @@ story += bullets([
     "official baseline, using spatially blocked cross-validation; record field scores for mapped landslides to test A8.",
     "Calibrate P<sub>f</sub> against outcomes (isotonic or Platt scaling on held-out data) before it is used as a probability.",
     "Calibrate class distributions with local laboratory data and SoilKsatDB; report weight ranges under ±20% class limits.",
-    "Add transient hydrology (Iverson/TRIGRS) with 1–3-day antecedent rainfall.",
+    "Temporal validation of the transient hydrology with dated Indonesian landslides and GPM IMERG / CHIRPS rainfall; "
+    "calibrate D<sub>0</sub>; add the unsaturated (Gardner) option.",
 ])
 
 story += [PageBreak(), P("References", "h1")]
 refs = [
     "Archer, G. E. B., Saltelli, A., &amp; Sobol, I. M. (1997). Sensitivity measures, ANOVA-like techniques and the use of bootstrap. <i>Journal of Statistical Computation and Simulation</i>, 58(2), 99–120. doi:10.1080/00949659708811825",
+    "Baum, R. L., Savage, W. Z., &amp; Godt, J. W. (2008). <i>TRIGRS — a Fortran program for transient rainfall infiltration and grid-based regional slope-stability analysis, version 2.0</i> (Open-File Report 2008-1159). U.S. Geological Survey. doi:10.3133/ofr20081159",
     "Brenning, A. (2005). Spatial prediction models for landslide hazards: review, comparison and evaluation. <i>Natural Hazards and Earth System Sciences</i>, 5(6), 853–862. doi:10.5194/nhess-5-853-2005",
     "Brier, G. W. (1950). Verification of forecasts expressed in terms of probability. <i>Monthly Weather Review</i>, 78(1), 1–3. doi:10.1175/1520-0493(1950)078&lt;0001:VOFEIT&gt;2.0.CO;2",
     "BSN (2017). <i>SNI 8460:2017 Persyaratan perancangan geoteknik</i>. Jakarta: Badan Standardisasi Nasional.",
+    "Caine, N. (1980). The rainfall intensity–duration control of shallow landslides and debris flows. <i>Geografiska Annaler A</i>, 62(1/2), 23–27. doi:10.1080/04353676.1980.11879996",
     "Corominas, J., van Westen, C., Frattini, P., Cascini, L., Malet, J.-P., Fotopoulou, S., et al. (2014). Recommendations for the quantitative analysis of landslide risk. <i>Bulletin of Engineering Geology and the Environment</i>, 73(2), 209–263. doi:10.1007/s10064-013-0538-8",
     "Duncan, J. M., &amp; Wright, S. G. (2005). <i>Soil Strength and Slope Stability</i>. Hoboken, NJ: Wiley.",
     "Fell, R., Corominas, J., Bonnard, C., Cascini, L., Leroi, E., &amp; Savage, W. Z. (2008). Guidelines for landslide susceptibility, hazard and risk zoning for land use planning. <i>Engineering Geology</i>, 102(3–4), 85–98. doi:10.1016/j.enggeo.2008.03.022",
     "Giam, P. S. K., &amp; Donald, I. B. (1989). <i>Example problems for testing soil slope stability programs</i>. Civil Engineering Research Report 8/1989, Monash University (ACADS survey, report U255).",
     "Guo, C., Pleiss, G., Sun, Y., &amp; Weinberger, K. Q. (2017). On calibration of modern neural networks. <i>Proceedings of the 34th ICML</i>, PMLR 70, 1321–1330.",
+    "Guzzetti, F., Peruccacci, S., Rossi, M., &amp; Stark, C. P. (2008). The rainfall intensity–duration control of shallow landslides and debris flows: an update. <i>Landslides</i>, 5(1), 3–17. doi:10.1007/s10346-007-0112-1",
     "Hammah, R. E., Yacoub, T. E., &amp; Curran, J. H. (2004). The influence of correlation and distribution truncation on slope stability analysis results. <i>Proceedings of the 57th Canadian Geotechnical Conference</i>, Québec.",
     "Hasofer, A. M., &amp; Lind, N. C. (1974). Exact and invariant second-moment code format. <i>Journal of the Engineering Mechanics Division</i>, 100(EM1), 111–121. doi:10.1061/JMCEA3.0001848",
+    "Hidayat, R., Sutanto, S. J., Hidayah, A., Ridwan, B., &amp; Mulyana, A. (2019). Development of a landslide early warning system in Indonesia. <i>Geosciences</i>, 9(10), 451. doi:10.3390/geosciences9100451",
     "Hosmer, D. W., &amp; Lemeshow, S. (2000). <i>Applied Logistic Regression</i> (2nd ed.). Wiley. doi:10.1002/0471722146",
     "Hynes-Griffin, M. E., &amp; Franklin, A. G. (1984). <i>Rationalizing the seismic coefficient method</i> (Misc. Paper GL-84-13). Vicksburg, MS: US Army Engineer Waterways Experiment Station.",
+    "Irawan, A., Virgianto, R., Safril, A., Munawar, &amp; Gustono, S. (2019). Rainfall threshold and soil moisture indexes for the initiation of landslide in Banjarmangu sub-district, Central Java, Indonesia. <i>IOP Conference Series: Earth and Environmental Science</i>, 243, 012028. doi:10.1088/1755-1315/243/1/012028",
     "ISSMGE TC304 (2021). State-of-the-art review of inherent variability and uncertainty in geotechnical properties and models. doi:10.53243/R0001",
     "Iverson, R. M. (2000). Landslide triggering by rain infiltration. <i>Water Resources Research</i>, 36(7), 1897–1910. doi:10.1029/2000WR900090",
     "Ma, J., Jiang, S., Liu, Z., Ren, Z., Lei, D., Tan, C., &amp; Guo, H. (2022). Machine learning models for slope stability classification of circular mode failure: an updated database and automated machine learning (AutoML) approach. <i>Sensors</i>, 22(23), 9166. doi:10.3390/s22239166",
@@ -666,6 +708,7 @@ refs = [
     "Taylor, D. W. (1937). Stability of earth slopes. <i>Journal of the Boston Society of Civil Engineers</i>, 24(3), 197–246.",
     "Whitman, R. V., &amp; Bailey, W. A. (1967). Use of computers for slope stability analysis. <i>Journal of the Soil Mechanics and Foundations Division</i>, 93(SM4), 475–498. doi:10.1061/JSFEAQ.0001003",
     "Wilson, E. B. (1927). Probable inference, the law of succession, and statistical inference. <i>Journal of the American Statistical Association</i>, 22(158), 209–212. doi:10.1080/01621459.1927.10502953",
+    "Yuniawan, R., Rifa'i, A., Faris, F., Subiyantoro, A., Satyaningsih, R., Hidayah, A., et al. (2022). Revised rainfall threshold in the Indonesian Landslide Early Warning System. <i>Geosciences</i>, 12(3), 129. doi:10.3390/geosciences12030129",
 ]
 story += [P(r, "ref") for r in refs]
 story += [Spacer(1, 6), P("Full citations with DOIs, verification status and additional sources are in "

@@ -1,13 +1,13 @@
 gate,code,description,value,threshold,reference,basis,status
 1 Verification,V1,"Infinite slope, c'=0 dry: FS = tan(phi)/tan(beta)",1.1102230246251565e-16,abs err < 1e-9,Skempton & DeLory (1957),analytic,PASS
-1 Verification,V2,"Bishop vs Taylor chart, phi=0, beta 45/60/75/90 deg (errors 3.7%, 0.1%, 0.2%, 0.1%)",0.037265009297066144,max rel err <= 5%,Taylor (1937); 45 deg limited by search depth,literature,PASS
+1 Verification,V2,"Bishop vs Taylor chart, phi=0, beta 45/60/75/90 deg (errors 3.7%, 0.1%, 0.2%, 0.1%)",0.037265009297066144,max rel err <= 5%,Taylor (1937) toe circles; at 45 deg a deep base circle gives Ns 0.181,literature,PASS
 1 Verification,V3,"Bishop, c'=0: converges to tan(phi)/tan(beta)",0.0012060800642174074,rel err <= 2%,Duncan & Wright (2005),analytic,PASS
-1 Verification,V4,"Bishop vs ACADS 1(a) (reference FS ~1.00, recalled, unverified)",0.009352374585582468,rel err <= 3%,Donald & Giam (1989),literature,PASS
+1 Verification,V4,Bishop vs ACADS 1(a) (referee FS 1.00; Slide2 Bishop 0.987),0.009352374585582468,rel err <= 3%,Giam & Donald (1989),literature,PASS
 1 Verification,V5,"FORM vs Monte Carlo (one test case, Pf ~0.97)",0.0007970905978142984,abs diff Pf <= 0.01,Hasofer & Lind (1974),project-set,PASS
 1 Verification,V6,Monotone constraints implemented: +10% c' never raises P(fail),0.0,= 0,Guaranteed by construction (not a validation),analytic,PASS
 2 Numerical,N1,Max 95% CI half-width of Pf per configuration (N=400),0.048765495830290995,<= 0.05,Wilson (1927); fixed by choice of N,analytic,PASS
-2 Numerical,N2,Seed stability: mean |dPf| between seeds,0.01610736,<= 0.02,Reproducibility,project-set,PASS
-2 Numerical,N3,Seed stability: max |dS_T| of Sobol indices,0.0003568561861764241,<= 0.02,"Archer, Saltelli & Sobol (1997)",project-set,PASS
+2 Numerical,N2,Seed stability: mean |dPf| between seeds,0.01634592,<= 0.02,Reproducibility,project-set,PASS
+2 Numerical,N3,Seed stability: max |dS_T| of Sobol indices,0.00058221675513348,<= 0.02,"Archer, Saltelli & Sobol (1997)",project-set,PASS
 2 Numerical,N4,"Site Pf estimator COV (case study, N=20,000)",0.002855948323380775,<= 0.10,N = (1-Pf)/(COV^2 Pf),literature,PASS
 3 Validation,A1,"Hybrid AUC, grouped CV, ALL cases (group-bootstrap 95% CI lower bound)",0.8315667742384796,>= 0.70 and point >= 0.80,Hosmer & Lemeshow (2000),literature,PASS
 3 Validation,A2,"Hybrid beats logistic regression on raw inputs (dAUC, CI lower bound)",0.09296150751010047,> 0,Fair statistical baseline,project-set,PASS
@@ -17,4 +17,4 @@ gate,code,description,value,threshold,reference,basis,status
 3 Validation,A6,Leakage gap: AUC(random CV) - AUC(grouped CV),0.013720722028648713,<= 0.05,Brenning (2005),project-set,PASS
 3 Validation,A7,"Physics Monte Carlo Pf is a calibrated probability (ECE of raw Pf, no fitting)",0.3311826086956523,<= 0.10,Probability must mean frequency,project-set,FAIL
 3 Validation,A8,Score-based HI (6 field scores -> Pf) validated against observed landslides,,AUC >= 0.80 and ECE <= 0.10,No outcome data with field scores exists yet,literature,PENDING
-3 Validation,A9,Spatial/temporal validation on an Indonesian landslide inventory,,AUC >= 0.80 on spatial blocks,Reichenbach et al. (2018) SQL >= 5; data: Samodra (2024),literature,PENDING
+3 Validation,A9,Spatial/temporal validation on an Indonesian landslide inventory,,AUC >= 0.80 on spatial blocks,"Reichenbach et al. (2018) SQL >= 5; data: Samodra (2024), Mendeley",literature,PENDING

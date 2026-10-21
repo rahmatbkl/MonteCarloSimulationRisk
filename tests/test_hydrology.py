@@ -44,3 +44,21 @@ def test_deep_response_peaks_after_rain_stops():
     times = np.array([1, 2, 4, 8]) * T
     psi = [pressure_head(Z, Z, 35.0, 1e-6, 1e-6, 2e-5, t, T) for t in times]
     assert np.argmax(psi) > 0                      # maximum after t = T
+
+
+def test_diffusivity_convention_matches_trigrs_series_form():
+    """
+    TRIGRS (Baum et al. 2008; iverson.f95) writes the transient response as
+    psi' = 2 (Iz/Ks) sqrt(D1 t) ierfc(Z / (2 sqrt(D1 t))) with D1 = D0 / cos^2(alpha),
+    i.e. D_hat = 4 D0 / cos^2(alpha). Iverson (2000) printed D_hat = 4 D0 cos^2(alpha),
+    which is wrong; this test guards the corrected convention.
+    """
+    from scipy.special import erfc
+    alpha, Ks, D0, Iz = 35.0, 1e-6, 1e-5, 5e-7
+    Z, t = 1.5, 6 * 3600.0
+    D1 = D0 / np.cos(np.radians(alpha)) ** 2
+    x = Z / (2 * np.sqrt(D1 * t))
+    ierfc = np.exp(-x**2) / np.sqrt(np.pi) - x * erfc(x)
+    expected = 2 * (Iz / Ks) * np.sqrt(D1 * t) * ierfc
+    got = pressure_head(Z, Z, alpha, Iz, Ks, D0, t, t, cap=False)
+    assert got == pytest.approx(expected, rel=1e-9)

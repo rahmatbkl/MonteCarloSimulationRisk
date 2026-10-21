@@ -5,7 +5,7 @@ Ini adalah dasar model TRIGRS (Baum et al., 2002; 2008). Persamaan Richards
 dilinearisasi untuk tanah jenuh/hampir jenuh pada lereng panjang (Z^2/A << 1),
 sehingga tekanan air pori menyebar ke bawah sebagai proses DIFUSI:
 
-    d(psi)/dt = D0 cos^2(alpha) d2(psi)/dZ2              (Z vertikal, ke bawah)
+    d(psi)/dt = (D0 / cos^2(alpha)) d2(psi)/dZ2          (Z vertikal, ke bawah)
 
 Solusi (Iverson 2000, persamaan 27-28), untuk hujan intensitas Iz selama T:
 
@@ -13,7 +13,13 @@ Solusi (Iverson 2000, persamaan 27-28), untuk hujan intensitas Iz selama T:
     psi(Z,t) = (Z - d) * beta + Z * (Iz/Kz) * [R(t*) - R(t* - T*)]    t >  T
 
     beta  = cos^2(alpha) - (Iz/Kz)_LT     (komponen tunak/background)
-    t*    = t / (Z^2 / D_hat),   T* = T / (Z^2 / D_hat),   D_hat = 4 D0 cos^2(alpha)
+    t*    = t / (Z^2 / D_hat),   T* = T / (Z^2 / D_hat),   D_hat = 4 D0 / cos^2(alpha)
+
+KOREKSI PENTING: Iverson (2000) mencetak D_hat = 4 D0 cos^2(alpha). Itu
+salah (kesalahan transformasi koordinat, ditemukan mahasiswa R. Rigon;
+lihat manual TRIGRS 2.0, Baum et al. 2008, OFR 2008-1159, hlm. 25). Kode
+resmi TRIGRS v2.1 (iverson.f95, baris 41) memakai dhat = 4*D0/cos^2
+("added 8 Jan 2013, RLB"). Modul ini mengikuti bentuk yang dikoreksi.
     R(t*) = sqrt(t*/pi) * exp(-1/t*) - erfc(1/sqrt(t*))
 
 Batasan yang diterapkan (seperti TRIGRS):
@@ -55,7 +61,7 @@ def pressure_head(Z, d, alpha_deg, Iz, Ks, D0, t, T, Iz_lt=0.0, cap=True):
     cos2 = np.cos(alpha) ** 2
     iz = np.minimum(Iz, Ks)                         # kelebihan -> limpasan
     beta = cos2 - np.minimum(Iz_lt, Ks) / Ks
-    d_hat = 4.0 * D0 * cos2
+    d_hat = 4.0 * D0 / cos2                         # bentuk terkoreksi (TRIGRS)
     t_star = t * d_hat / Z**2
     T_star = T * d_hat / Z**2
     response = iverson_R(t_star) - np.where(t > T, iverson_R(t_star - T_star), 0.0)
@@ -100,12 +106,12 @@ def fs_transient_from_parameters(p, d0):
 # ---------------------------------------------------------------------------
 def numerical_pressure_response(Z_eval, alpha_deg, Iz, Ks, D0, t_eval, T, z_max=None, nz=801, nt=4000):
     """
-    Selesaikan d(psi')/dt = D0 cos^2(alpha) d2(psi')/dZ2 dengan beda hingga
+    Selesaikan d(psi')/dt = (D0 / cos^2 alpha) d2(psi')/dZ2 dengan beda hingga
     Crank-Nicolson, psi'(Z,0) = 0, d(psi')/dZ = -Iz/Ks di Z=0 selama hujan
     (0 sesudahnya), psi' = 0 di Z = z_max (jauh). Mengembalikan psi'(Z_eval, t_eval).
     Dipakai HANYA untuk memverifikasi solusi analitik Iverson.
     """
-    D = D0 * np.cos(np.radians(alpha_deg)) ** 2
+    D = D0 / np.cos(np.radians(alpha_deg)) ** 2
     iz = min(Iz, Ks)
     if z_max is None:
         z_max = 10.0 * max(Z_eval.max(), np.sqrt(D * t_eval.max()))

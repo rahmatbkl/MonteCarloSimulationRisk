@@ -768,6 +768,64 @@ def fig_scoring():
     save(fig, "F15_scoring")
 
 
+# --------------------------------------------------------------------------
+# F16 Transient hydrology: time response, I-D plausibility, static vs transient
+# --------------------------------------------------------------------------
+HYD = ROOT / "results" / "hydrology"
+
+
+def fig_hydrology():
+    fig, axes = plt.subplots(1, 3, figsize=(7.6, 3.5), gridspec_kw={"width_ratios": [1, 1.25, 1]})
+    ax = axes[0]
+    tr = pd.read_csv(HYD / "time_response.csv")
+    ax.axvspan(0, 24, color=GRID, alpha=0.8, lw=0)
+    ax.text(12, 0.02, "rain 24 h", ha="center", fontsize=7, color=MUTED, transform=ax.get_xaxis_transform())
+    for ratio, col in zip((5, 50, 200), (ORANGE, BLUE, VIOLET)):
+        d = tr[tr.d0_ratio == ratio]
+        ax.plot(d.t_h, d.psi_slip, color=col, lw=1.6, label=f"$D_0/K_s$={ratio}")
+        ax.plot(d.t_h, d.psi_mid, color=col, lw=1.0, ls="--")
+    ax.set_xlabel("Time since rain onset (h)"); ax.set_ylabel(r"Pressure head $\psi$ (m)")
+    ax.legend(frameon=False, fontsize=6.3, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3)
+    ax.set_title("(a) ψ at slip plane (solid), mid-depth (dashed)", fontsize=8.5, loc="left")
+
+    ax = axes[1]
+    th = pd.read_csv(HYD / "model_ID_thresholds.csv")
+    for soil, col in zip((1, 2, 3, 4), (BLUE, AQUA, ORANGE, MAGENTA)):
+        d = th[(th.soil == soil) & (th.d0_ratio == 50)].dropna(subset=["I_crit_mm_h"])
+        lo = th[(th.soil == soil) & (th.d0_ratio == 200)].dropna(subset=["I_crit_mm_h"])
+        if len(d):
+            ax.plot(d.D_h, d.I_crit_mm_h, "-o", color=col, ms=3, lw=1.5, label=f"model, soil class {soil}")
+        if len(lo):
+            ax.plot(lo.D_h, lo.I_crit_mm_h, ":", color=col, lw=1.0)
+    D = np.logspace(0, np.log10(240), 50)
+    styles = {"Caine (1980) global": (INK, "--"), "Guzzetti et al. (2008) global": (MUTED, "--"),
+              "Banjarmangu (Irawan et al. 2019)": (RED, "-")}
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("rh", ROOT / "audit" / "run_hydrology.py")
+    rh = importlib.util.module_from_spec(spec); spec.loader.exec_module(rh)
+    for k, f in rh.THRESHOLDS.items():
+        col, ls = styles[k]
+        ax.plot(D, f(D), color=col, ls=ls, lw=1.1, label=k)
+    for k, (dd, ii) in rh.POINTS.items():
+        ax.plot(dd, ii, marker="s" if "Hidayat" in k else "^", color=GREEN, ms=5, ls="none")
+    ax.plot([], [], marker="s", color=GREEN, ls="none", label="Hidayat 2019 / Yuniawan 2022 (1-, 3-day)")
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlim(1, 240); ax.set_ylim(0.05, 60)
+    ax.set_xlabel("Rain duration D (h)"); ax.set_ylabel("Critical mean intensity I (mm/h)")
+    ax.legend(frameon=False, fontsize=5.6, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
+    ax.set_title("(b) Model vs empirical I–D thresholds", fontsize=9, loc="left")
+
+    ax = axes[2]
+    cmp_ = pd.read_csv(HYD / "static_vs_transient.csv").set_index("hydrology")
+    y = np.arange(6)
+    ax.barh(y + 0.18, [cmp_.loc["static", f"w_{v}"] for v in VARIABLES], 0.34, color=MUTED, label="static")
+    ax.barh(y - 0.18, [cmp_.loc["transient", f"w_{v}"] for v in VARIABLES], 0.34, color=BLUE, label="transient")
+    ax.set_yticks(y, [SHORT[v] for v in VARIABLES]); ax.invert_yaxis()
+    ax.set_xlabel("Normalised total Sobol' weight"); ax.legend(frameon=False, fontsize=7, loc="lower right")
+    ax.set_title("(c) Weights: static vs transient", fontsize=9, loc="left")
+    fig.tight_layout()
+    save(fig, "F16_hydrology")
+
+
 def main():
     grid = pd.read_csv(RES / "full_factorial_v2.csv")
     sob, S2 = exact_sobol(grid, VARIABLES)
@@ -787,6 +845,7 @@ def main():
     fig_mc_effect()
     fig_validation_bias()
     fig_scoring()
+    fig_hydrology()
 
 
 if __name__ == "__main__":

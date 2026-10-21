@@ -35,6 +35,15 @@ from scipy import stats
 
 from .physics import effective_root_cohesion, factor_of_safety
 
+# Difusivitas hidraulik untuk hidrologi transien (Iverson 2000 / TRIGRS).
+# Tidak ada nilai default resmi di manual TRIGRS; definisi D0 = Ks / Ss.
+# Aplikasi TRIGRS yang terbit memakai rasio D0/Ks antara ~2 dan 200
+# (contoh manual 8-60; Raia et al. 2014: 3.8-50; Alvioli et al. 2014: 8.3, 47;
+# Bandung Barat: 100; Ma et al. 2023: 200). Di sini log10(D0/Ks) ~ U(log10 5, log10 200)
+# dan D0 terikat pada Ks (bukan diambil independen). Lihat
+# research_notes/Verifikasi referensi/transient_hydrology.md.
+D0_KS_RATIO = (5.0, 200.0)
+
 
 @dataclass(frozen=True)
 class SoilClass:
@@ -72,7 +81,7 @@ GROUNDWATER_RATIO = {1: (0.0, 0.1), 2: (0.1, 0.35), 3: (0.35, 0.6), 4: (0.6, 0.8
 CUMULATIVE_RAIN_MM = {1: (0, 50), 2: (50, 100), 3: (100, 200), 4: (200, 350), 5: (350, 600)}
 RAIN_DURATION_HR = (24.0, 72.0)
 SEISMIC_KH = {1: (0.0, 0.02), 2: (0.02, 0.07), 3: (0.07, 0.12), 4: (0.12, 0.175), 5: (0.175, 0.30)}
-# kh = 0.5 * PGA (Hynes-Griffin & Franklin, 1984); lihat peta PGA SNI 1726:2019.
+# kh = 0.5 * PGA (Hynes-Griffin & Franklin, 1984; SNI 8460:2017 pasal 12.2.7).
 ROOT_COHESION = {1: (7.0, 25.0), 2: (2.0, 7.0), 3: (1.5, 4.0), 4: (1.0, 3.0), 5: (0.0, 0.0)}
 ROOT_DEPTH = {1: (1.5, 3.0), 2: (1.0, 2.0), 3: (0.5, 1.5), 4: (0.2, 0.5), 5: (0.0, 0.0)}
 
@@ -134,6 +143,8 @@ def sample_physical(scores, n_mc, rng, rho=RHO_C_PHI):
     p["kh"] = _uniform_class(SEISMIC_KH, seis, rng, n_mc)
     p["c_root"] = _uniform_class(ROOT_COHESION, veg, rng, n_mc)
     p["root_depth"] = _uniform_class(ROOT_DEPTH, veg, rng, n_mc)
+    lo, hi = np.log10(D0_KS_RATIO[0]), np.log10(D0_KS_RATIO[1])
+    p["d0"] = p["ks"] * 10 ** (lo + rng.random((n_cfg, n_mc)) * (hi - lo))
     return p
 
 
@@ -150,13 +161,21 @@ def water_ratio_cumulative(m0, rain_mm, duration_hr, ks, porosity, z):
     return np.minimum(1.0, m0 + infiltrated_m / porosity / z)
 
 
-def fs_from_parameters(p):
-    """Hitung FS dari dict parameter fisik (hasil sample_physical atau data lapangan)."""
+def fs_from_parameters(p, hydrology="static"):
+    """
+    Hitung FS dari dict parameter fisik.
+    hydrology="static"    : neraca air sekali langkah (water_ratio_cumulative)
+    hydrology="transient" : difusi tekanan air pori Iverson (2000)/TRIGRS,
+                            FS minimum selama dan setelah hujan
+    """
+    if hydrology == "transient":
+        from .hydrology import fs_transient_from_parameters
+        return fs_transient_from_parameters(p, p["d0"])
     z = p["thickness"] / np.cos(np.radians(p["beta"]))
     m = water_ratio_cumulative(p["m0"], p["rain_mm"], p["duration_hr"], p["ks"], p["porosity"], z)
     c_root = effective_root_cohesion(p["c_root"], p["root_depth"], p["thickness"])
     return factor_of_safety(p["c"], p["phi"], p["gamma"], z, p["beta"], m, p["kh"], c_root)
 
 
-def sample_factor_of_safety_v2(scores, n_mc, rng, rho=RHO_C_PHI):
-    return fs_from_parameters(sample_physical(scores, n_mc, rng, rho))
+def sample_factor_of_safety_v2(scores, n_mc, rng, rho=RHO_C_PHI, hydrology="static"):
+    return fs_from_parameters(sample_physical(scores, n_mc, rng, rho), hydrology)
