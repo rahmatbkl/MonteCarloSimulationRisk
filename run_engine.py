@@ -71,15 +71,15 @@ def verification(cases):
     out.append(Criterion("1 Verification", "V2", "Bishop vs Taylor chart, phi=0, beta 45/60/75/90 deg "
                          f"(errors {', '.join(f'{e:.1%}' for e in errs)})",
                          max(errs), "max rel err <= 5%", max(errs) <= 0.05,
-                         "Taylor (1937); 45 deg limited by search depth", "literature"))
+                         "Taylor (1937) toe circles; at 45 deg a deep base circle gives Ns 0.181", "literature"))
     f, _ = bishop_fs(18.0, 0.0, 35.0, 30.0, 10.0, 0.0)
     e3 = abs(f / (np.tan(np.radians(35)) / np.tan(np.radians(30))) - 1)
     out.append(Criterion("1 Verification", "V3", "Bishop, c'=0: converges to tan(phi)/tan(beta)",
                          e3, "rel err <= 2%", e3 <= 0.02, "Duncan & Wright (2005)", "analytic"))
     f, _ = bishop_fs(20.0, 3.0, 19.6, 26.57, 10.0, 0.0)
     e4 = abs(f - 1.00) / 1.00
-    out.append(Criterion("1 Verification", "V4", "Bishop vs ACADS 1(a) (reference FS ~1.00, recalled, unverified)",
-                         e4, "rel err <= 3%", e4 <= 0.03, "Donald & Giam (1989)", "literature"))
+    out.append(Criterion("1 Verification", "V4", "Bishop vs ACADS 1(a) (referee FS 1.00; Slide2 Bishop 0.987)",
+                         e4, "rel err <= 3%", e4 <= 0.03, "Giam & Donald (1989)", "literature"))
     V = [RandomVariable("c", lognormal(8, 0.4)), RandomVariable("phi", lognormal(28, 0.1)),
          RandomVariable("gamma", stats.norm(18.5, 0.925)), RandomVariable("m", stats.uniform(0.3, 0.5))]
     R = np.eye(4); R[0, 1] = R[1, 0] = -0.5
@@ -174,7 +174,7 @@ def validation(cases):
                          "No outcome data with field scores exists yet", "literature"))
     out.append(Criterion("3 Validation", "A9", "Spatial/temporal validation on an Indonesian landslide inventory",
                          np.nan, "AUC >= 0.80 on spatial blocks", None,
-                         "Reichenbach et al. (2018) SQL >= 5; data: Samodra (2024)", "literature"))
+                         "Reichenbach et al. (2018) SQL >= 5; data: Samodra (2024), Mendeley", "literature"))
     results["pf_mc_metrics"] = m
     return out, results
 

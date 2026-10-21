@@ -236,12 +236,12 @@ story += [P("1  Conceptualisation", "h1"),
                   "c' lognormal (COV 0.45–0.60); φ' normal truncated ±3σ (COV 0.08–0.20); γ normal (COV 0.05); "
                   "K<sub>s</sub> lognormal (σ<sub>log10</sub> 0.5); ρ(c',φ') = −0.5 via Gaussian copula",
                   "ISSMGE TC304 (2021); Phoon & Kulhawy (1999); Indonesian residual-soil tests"],
-                 ["X2 Geometry", "β, H", "β uniform in class (10–60°); H uniform 1–3 m", "Infinite-slope validity (L/H ≥ 16–25)"],
+                 ["X2 Geometry", "β, H", "β uniform in class (10–60°); H uniform 1–3 m", "Infinite-slope validity (L/H ≥ 25; Milledge et al., 2012)"],
                  ["X3 Groundwater", "m<sub>0</sub> = h<sub>w</sub>/z", "uniform in class (0–1)", "Field / piezometer class"],
                  ["X4 Rainfall", "P, D", "P uniform in class (0–600 mm); D uniform 24–72 h",
-                  "Java events: 300–600 mm cumulative triggers"],
+                  "Project assumption (class limits not yet tied to a cited threshold)"],
                  ["X5 Seismic", "k<sub>h</sub>", "uniform in class (0–0.30)", "k<sub>h</sub> = 0.5·PGA (Hynes-Griffin & Franklin 1984)"],
-                 ["X6 Vegetation", "c<sub>r</sub>, root depth", "uniform in class (0–25 kPa; 0–3 m)", "Stevens et al. (2006) compilation"]],
+                 ["X6 Vegetation", "c<sub>r</sub>, root depth", "uniform in class (0–25 kPa; 0–3 m)", "Stevens et al. (2006); Schmidt et al. (2001). Natural forest (25.6–94.3 kPa) excluded"]],
                 "Hazard variables, the physical parameters they control, and the probability model used inside each class.",
                 col_widths=[2.3 * cm, 2.6 * cm, 7.0 * cm, 5.1 * cm]),
           PageBreak()]
@@ -274,15 +274,17 @@ story += [P("2  Mathematical and physical formulation", "h1"),
                    r"\qquad m_{\alpha,i}=\cos\alpha_i+\dfrac{\sin\alpha_i\tan\phi'}{FS},\qquad u_i=r_u\gamma h_i"),
           P("The critical circle is found by a vectorised search over 1,344 candidate circles defined by an exit point, an "
             "entry point and the sagitta of the arc. Two admissibility rules are enforced: both arc ends must lie on the lower "
-            "half of the circle, and circles with m<sub>α</sub> &lt; 0.2 on any loaded slice are rejected (Whitman & Bailey, "
-            "1967). Without these rules the search returned FS values up to 45% below Taylor's exact solution."),
+            "half of the circle, and circles with m<sub>α</sub> &lt; 0.2 on any loaded slice are rejected (a common practice; "
+            "its attribution to Whitman &amp; Bailey (1967) could not be confirmed from an accessible source). Without these "
+            "rules the search returned FS values up to 45% below Taylor's exact solution."),
           P("2.4  Probabilistic model", "h2"),
           P("Within a soil class, c' and φ' are correlated through a Gaussian copula. With independent standard normal "
             "variables Z<sub>1</sub>, Z<sub>2</sub> and correlation ρ = −0.5:"),
           equation(r"c'=F^{-1}_{\mathrm{LN}}\!\left(\Phi(Z_1)\right),\qquad \phi'=F^{-1}_{\mathrm{TN}}\!\left(\Phi(\rho Z_1+\sqrt{1-\rho^{2}}\,Z_2)\right)"),
           P("Negative c'–φ' correlation matters: with ρ = 0 the failure probability of a reference slope is about 1.05%, "
-            "against 0.05% with ρ = −0.5 (Hammah et al., Rocscience). Truncation of φ' at ±3σ avoids the non-physical tails "
-            "of a normal distribution without biasing P<sub>f</sub>."),
+            "against 0.05% with ρ = −0.5 (Hammah et al., 2004; homogeneous slope, mean FS 1.21, normal c' and φ' with COV 10%, "
+            "±3σ truncation). Truncation is not neutral: in the same study ρ = −0.5 gives 0.12% at ±5σ but 0.05% at ±3σ, so "
+            "truncating φ' at ±3σ removes non-physical tails at the cost of lowering small P<sub>f</sub> values."),
           P("2.5  Reliability measures", "h2"),
           equation(r"\hat{P}_f=\frac{1}{N}\sum_{k=1}^{N}\mathbf{1}\left[FS(\boldsymbol{\theta}_k)<1\right],\qquad"
                    r"\mathrm{COV}(\hat{P}_f)=\sqrt{\frac{1-P_f}{N\,P_f}},\qquad \beta_R=-\Phi^{-1}(P_f)"),
@@ -452,8 +454,10 @@ story += [P("5  Accuracy, acceptance and reliability", "h1"),
           table(rows, f"Acceptance protocol (audited). {N_PASS} pass, {N_FAIL} fail, {N_PEND} pending; shaded rows are not passed.",
                 col_widths=[1.3 * cm, 1.0 * cm, 6.3 * cm, 1.5 * cm, 3.0 * cm, 1.7 * cm, 1.8 * cm], highlight=hl),
           P("<b>Site-level reliability.</b> For decisions on individual slopes a dual criterion is recommended: the SNI "
-            "8460:2017 minimum factor of safety (1.5 static, 1.1 seismic for permanent slopes, cited from secondary sources "
-            "and still to be confirmed against the standard) <i>and</i> a reliability index β<sub>R</sub> ≥ 3. A mean FS of 1.5 "
+            "8460:2017 minimum factor of safety <i>and</i> a reliability index β<sub>R</sub> ≥ 3. For soil slopes SNI 8460:2017 "
+            "(Tabel 25) requires FS 1.25–1.5 when uncertainty is low and 1.5–≥2.0 when it is high, depending on the cost and "
+            "consequence of failure; the 1.5 permanent / 1.3 temporary values apply to rock slopes (Tabel 26); pseudostatic "
+            "analysis requires FS &gt; 1.1 (§7.5.1.1), with k<sub>h</sub> = 0.5·PGA (§12.2.7). A mean FS of 1.5 "
             "corresponds (for lognormal FS) to β<sub>R</sub> ≈ 4.0 when the COV of FS is 0.10 but only ≈ 2.0 when it is 0.20. "
             "Because criterion A7 fails, β<sub>R</sub> computed from literature COVs should be treated as a relative measure "
             "until it is calibrated against local outcomes."),
@@ -521,7 +525,8 @@ story += [P("7  Audit: corrected claims, validation bias, the role of Monte Carl
                   f"Normalised weights move with class definitions: soil {min(w_soil):.2f}–{max(w_soil):.2f}, "
                   f"vegetation {min(w_veg):.2f}–{max(w_veg):.2f}",
                   "Judgement moved from weights to class tables; it was reduced and made explicit, not removed"],
-                 ["Bishop matches Taylor within 0.2%", "The 45° case (3.7% error) had been left out of the test",
+                 ["Bishop matches Taylor within 0.2%", "The 45° toe-circle case (3.7% error) had been left out; at 45° the global "
+                  "critical circle is a deep base circle (Ns ≈ 0.181)",
                   "0.1–0.2% for 60–90°, 3.7% at 45°"],
                  ["Case-history AUC compared with published map AUCs",
                   "Slope-classification AUC and susceptibility-map AUC measure different tasks", "Not compared"]],
@@ -586,7 +591,8 @@ story += [P("7  Audit: corrected claims, validation bias, the role of Monte Carl
 story += [P("8  Position in the literature, limitations, ethical use and next steps", "h1"),
           P("8.1  Position", "h2"),
           P("Combining the infinite-slope equation with Monte Carlo sampling is established (SINMAP, TRIGRS-P, HIRESSS, "
-            "Landlab). TRIGRS-P improved predictive power by about 10–16% over deterministic TRIGRS (Raia et al., 2014). "
+            "Landlab). TRIGRS-P improved predictive power over deterministic TRIGRS by about 10% and 16% in two test areas, "
+            "Frontignano (Italy) and Mukilteo (USA) (Raia et al., 2014). "
             "Published susceptibility maps report AUC values on landslide inventories; those values measure a different task "
             "from the slope-classification AUC in Section 4 and are not compared with it here. The literature search found no "
             "study that replaces AHP factor weights by variance-based indices computed from a physical model, nor a "
@@ -604,7 +610,7 @@ story += bullets([
     "<b>Data quality.</b> The case database mixes soil, rock and mine slopes, contains conflicting labels and frequently "
     "disagrees with homogeneous slope mechanics.",
     "<b>Spatial structure and mechanism.</b> Parameters are sampled independently per slope; infinite slope applies only "
-    "to shallow translational slides (length/depth ≥ 16–25).",
+    "to shallow translational slides (length/depth ≥ 25; Milledge et al., 2012).",
 ])
 story += [P("8.3  Ethical use", "h2"),
           P("A landslide model influences decisions that affect lives and livelihoods, so its errors are not symmetric: "
@@ -632,26 +638,34 @@ story += bullets([
 
 story += [PageBreak(), P("References", "h1")]
 refs = [
-    "Brenning, A. (2005). Spatial prediction models for landslide hazards: review, comparison and evaluation. <i>Natural Hazards and Earth System Sciences</i>, 5, 853–862.",
-    "Corominas, J., et al. (2014). Recommendations for the quantitative analysis of landslide risk. <i>Bulletin of Engineering Geology and the Environment</i>, 73, 209–263.",
-    "Donald, I. B., &amp; Giam, P. (1989). <i>Soil slope stability programs review</i> (ACADS Publication U255). Melbourne: ACADS.",
-    "Fell, R., et al. (2008). Guidelines for landslide susceptibility, hazard and risk zoning for land use planning. <i>Engineering Geology</i>, 102, 85–98.",
-    "Hammah, R. E., Yacoub, T. E., &amp; Curran, J. H. Probabilistic slope analysis with the finite element method. Rocscience technical paper.",
-    "Hasofer, A. M., &amp; Lind, N. C. (1974). Exact and invariant second-moment code format. <i>Journal of the Engineering Mechanics Division</i>, 100, 111–121.",
-    "Hosmer, D. W., &amp; Lemeshow, S. (2000). <i>Applied Logistic Regression</i> (2nd ed.). Wiley.",
-    "Hynes-Griffin, M. E., &amp; Franklin, A. G. (1984). <i>Rationalizing the seismic coefficient method</i> (Misc. Paper GL-84-13). US Army Corps of Engineers.",
-    "ISSMGE TC304 (2021). State-of-the-art review of inherent variability and uncertainty in geotechnical properties and models. doi:10.53243/R0001.",
-    "Iverson, R. M. (2000). Landslide triggering by rain infiltration. <i>Water Resources Research</i>, 36, 1897–1910.",
-    "Ma, J., Jiang, S., Liu, Z., Ren, Z., et al. (2022). Machine learning models for slope stability classification of circular mode failure: an updated database and automated machine learning (AutoML) approach. <i>Sensors</i>, 22, 9166. https://pmc.ncbi.nlm.nih.gov/articles/PMC9735765/",
-    "Milledge, D. G., et al. (2012). Simple rules to minimise prediction uncertainty in rainfall-triggered landslide modelling. <i>Earth Surface Processes and Landforms</i>, 37, 1158–1166.",
-    "Oberkampf, W. L., Trucano, T. G., &amp; Hirsch, C. (2003). <i>Verification, validation, and predictive capability in computational engineering and physics</i> (SAND2003-3769). Sandia National Laboratories.",
-    "Phoon, K.-K., &amp; Kulhawy, F. H. (1999). Characterization of geotechnical variability. <i>Canadian Geotechnical Journal</i>, 36, 612–624.",
-    "Raia, S., et al. (2014). Improving predictive power of physically based rainfall-induced shallow landslide models: a probabilistic approach. <i>Geoscientific Model Development</i>, 7, 495–514.",
-    "Reichenbach, P., et al. (2018). A review of statistically-based landslide susceptibility models. <i>Earth-Science Reviews</i>, 180, 60–91.",
-    "Samodra, G. (2024). Landslide inventory of Cyclone Cempaka (dataset). Mendeley Data, doi:10.17632/vrtx3w6mjd.1.",
-    "Stevens, E., et al. (2006). Root cohesion compilation, as summarised in the root-reinforcement literature (see research notes).",
-    "Taylor, D. W. (1937). Stability of earth slopes. <i>Journal of the Boston Society of Civil Engineers</i>, 24, 197–246.",
-    "Whitman, R. V., &amp; Bailey, W. A. (1967). Use of computers for slope stability analysis. <i>Journal of the Soil Mechanics and Foundations Division</i>, 93, 475–498.",
+    "Archer, G. E. B., Saltelli, A., &amp; Sobol, I. M. (1997). Sensitivity measures, ANOVA-like techniques and the use of bootstrap. <i>Journal of Statistical Computation and Simulation</i>, 58(2), 99–120. doi:10.1080/00949659708811825",
+    "Brenning, A. (2005). Spatial prediction models for landslide hazards: review, comparison and evaluation. <i>Natural Hazards and Earth System Sciences</i>, 5(6), 853–862. doi:10.5194/nhess-5-853-2005",
+    "Brier, G. W. (1950). Verification of forecasts expressed in terms of probability. <i>Monthly Weather Review</i>, 78(1), 1–3. doi:10.1175/1520-0493(1950)078&lt;0001:VOFEIT&gt;2.0.CO;2",
+    "BSN (2017). <i>SNI 8460:2017 Persyaratan perancangan geoteknik</i>. Jakarta: Badan Standardisasi Nasional.",
+    "Corominas, J., van Westen, C., Frattini, P., Cascini, L., Malet, J.-P., Fotopoulou, S., et al. (2014). Recommendations for the quantitative analysis of landslide risk. <i>Bulletin of Engineering Geology and the Environment</i>, 73(2), 209–263. doi:10.1007/s10064-013-0538-8",
+    "Duncan, J. M., &amp; Wright, S. G. (2005). <i>Soil Strength and Slope Stability</i>. Hoboken, NJ: Wiley.",
+    "Fell, R., Corominas, J., Bonnard, C., Cascini, L., Leroi, E., &amp; Savage, W. Z. (2008). Guidelines for landslide susceptibility, hazard and risk zoning for land use planning. <i>Engineering Geology</i>, 102(3–4), 85–98. doi:10.1016/j.enggeo.2008.03.022",
+    "Giam, P. S. K., &amp; Donald, I. B. (1989). <i>Example problems for testing soil slope stability programs</i>. Civil Engineering Research Report 8/1989, Monash University (ACADS survey, report U255).",
+    "Guo, C., Pleiss, G., Sun, Y., &amp; Weinberger, K. Q. (2017). On calibration of modern neural networks. <i>Proceedings of the 34th ICML</i>, PMLR 70, 1321–1330.",
+    "Hammah, R. E., Yacoub, T. E., &amp; Curran, J. H. (2004). The influence of correlation and distribution truncation on slope stability analysis results. <i>Proceedings of the 57th Canadian Geotechnical Conference</i>, Québec.",
+    "Hasofer, A. M., &amp; Lind, N. C. (1974). Exact and invariant second-moment code format. <i>Journal of the Engineering Mechanics Division</i>, 100(EM1), 111–121. doi:10.1061/JMCEA3.0001848",
+    "Hosmer, D. W., &amp; Lemeshow, S. (2000). <i>Applied Logistic Regression</i> (2nd ed.). Wiley. doi:10.1002/0471722146",
+    "Hynes-Griffin, M. E., &amp; Franklin, A. G. (1984). <i>Rationalizing the seismic coefficient method</i> (Misc. Paper GL-84-13). Vicksburg, MS: US Army Engineer Waterways Experiment Station.",
+    "ISSMGE TC304 (2021). State-of-the-art review of inherent variability and uncertainty in geotechnical properties and models. doi:10.53243/R0001",
+    "Iverson, R. M. (2000). Landslide triggering by rain infiltration. <i>Water Resources Research</i>, 36(7), 1897–1910. doi:10.1029/2000WR900090",
+    "Ma, J., Jiang, S., Liu, Z., Ren, Z., Lei, D., Tan, C., &amp; Guo, H. (2022). Machine learning models for slope stability classification of circular mode failure: an updated database and automated machine learning (AutoML) approach. <i>Sensors</i>, 22(23), 9166. doi:10.3390/s22239166",
+    "Milledge, D. G., Griffiths, D. V., Lane, S. N., &amp; Warburton, J. (2012). Limits on the validity of infinite length assumptions for modelling shallow landslides. <i>Earth Surface Processes and Landforms</i>, 37(11), 1158–1166. doi:10.1002/esp.3235",
+    "Oberkampf, W. L., Trucano, T. G., &amp; Hirsch, C. (2003). <i>Verification, validation, and predictive capability in computational engineering and physics</i> (SAND2003-3769). Sandia National Laboratories. doi:10.2172/918370",
+    "Phoon, K.-K., &amp; Kulhawy, F. H. (1999). Characterization of geotechnical variability. <i>Canadian Geotechnical Journal</i>, 36(4), 612–624. doi:10.1139/t99-038",
+    "Raia, S., Alvioli, M., Rossi, M., Baum, R. L., Godt, J. W., &amp; Guzzetti, F. (2014). Improving predictive power of physically based rainfall-induced shallow landslide models: a probabilistic approach. <i>Geoscientific Model Development</i>, 7(2), 495–514. doi:10.5194/gmd-7-495-2014",
+    "Reichenbach, P., Rossi, M., Malamud, B. D., Mihir, M., &amp; Guzzetti, F. (2018). A review of statistically-based landslide susceptibility models. <i>Earth-Science Reviews</i>, 180, 60–91. doi:10.1016/j.earscirev.2018.03.001",
+    "Samodra, G. (2024). <i>Spatial datasets for benchmarking machine learning-based landslide susceptibility models</i> (Version 1) [Dataset]. Mendeley Data. doi:10.17632/vrtx3w6mjd.1",
+    "Schmidt, K. M., Roering, J. J., Stock, J. D., Dietrich, W. E., Montgomery, D. R., &amp; Schaub, T. (2001). The variability of root cohesion as an influence on shallow landslide susceptibility in the Oregon Coast Range. <i>Canadian Geotechnical Journal</i>, 38(5), 995–1024. doi:10.1139/t01-031",
+    "Skempton, A. W., &amp; DeLory, F. A. (1957). Stability of natural slopes in London Clay. <i>Proceedings of the 4th ICSMFE</i>, London, 2, 378–381.",
+    "Stevens, V., Stead, D., &amp; Millard, T. (2006). The role of root reinforcement in slope stability: a review. <i>Sea to Sky Geotechnique 2006</i>, Vancouver, 327–334.",
+    "Taylor, D. W. (1937). Stability of earth slopes. <i>Journal of the Boston Society of Civil Engineers</i>, 24(3), 197–246.",
+    "Whitman, R. V., &amp; Bailey, W. A. (1967). Use of computers for slope stability analysis. <i>Journal of the Soil Mechanics and Foundations Division</i>, 93(SM4), 475–498. doi:10.1061/JSFEAQ.0001003",
+    "Wilson, E. B. (1927). Probable inference, the law of succession, and statistical inference. <i>Journal of the American Statistical Association</i>, 22(158), 209–212. doi:10.1080/01621459.1927.10502953",
 ]
 story += [P(r, "ref") for r in refs]
 story += [Spacer(1, 6), P("Full citations with DOIs, verification status and additional sources are in "
