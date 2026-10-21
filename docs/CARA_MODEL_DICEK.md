@@ -55,7 +55,7 @@ Bug ketiga **tidak** tertangkap oleh verifikasi Crank–Nicolson, karena solver 
 | N2 | Stabilitas antar seed: rata-rata \|ΔPf\| | 0,016 |
 | N3 | Stabilitas antar seed: indeks Sobol | ≤ 0,0004 |
 | N4 | COV Pf studi kasus (N = 20.000) | 0,003 |
-| – | Noise Monte Carlo vs galat skoring | s.d. 0,019 vs ≈ 0,17 (galat skoring ~9× lebih besar) |
+| – | Noise Monte Carlo vs galat skoring | s.d. 0,017 vs ≈ 0,16 (galat skoring ~9× lebih besar) |
 
 ---
 

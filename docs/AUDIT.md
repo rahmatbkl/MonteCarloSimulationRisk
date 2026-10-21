@@ -94,12 +94,12 @@ Each score class becomes a distribution of physical parameters. Monte Carlo samp
 
 | Effect | Size | Source |
 |---|---|---|
-| Sampling noise at N = 400 (case study) | s.d. of P<sub>f</sub> = **0.019** (0.050 at N = 50; 0.002 at N = 20,000) | `mc_sample_size.csv` |
+| Sampling noise at N = 400 (case study) | s.d. of P<sub>f</sub> = **0.017** (0.051 at N = 50; 0.002 at N = 20,000) | `mc_sample_size.csv` |
 | c′–φ′ correlation (ρ = 0, −0.5, −0.7) | Weights change ≤ 0.01; case P<sub>f</sub> 0.854–0.862 | `mc_assumption_sensitivity.csv` |
 | COV × 0.5 or × 1.5 | Weights change ≤ 0.02; case P<sub>f</sub> 0.850–0.872 | same |
 | Class definitions (v1 uniform vs v2 literature) | Soil weight **0.37 → 0.19**, vegetation **0.11 → 0.26** | same |
 | Root cohesion × 0.4 (lower-bound sensitivity) | Vegetation weight **0.26 → 0.07**; case P<sub>f</sub> 0.86 → 0.93 | same |
-| Observer scoring error (20% chance per score of ±1 class) | 90% interval of case P<sub>f</sub>: **0.41–0.97** | `scoring_uncertainty_case.csv` |
+| Observer scoring error (20% chance per score of ±1 class) | 90% interval of case P<sub>f</sub>: **0.41–0.94** | `scoring_uncertainty_case.csv` |
 
 **Conclusions:**
 1. Monte Carlo noise is negligible at N = 400.

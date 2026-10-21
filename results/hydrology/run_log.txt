@@ -1,0 +1,3 @@
+static mean Pf 0.628 case 0.85975 w_rain 0.0115
+transient mean Pf 0.631 case 0.86625 w_rain 0.0074
+written /home/user/MonteCarloSimulationRisk/results/hydrology

@@ -19,3 +19,16 @@ D_hybrid             0.871        0.047  ...          0.141            0.073
 E_logistic           0.827        0.065  ...          0.138            0.043
 
 [5 rows x 5 columns]
+Part 3 base (c'0.45, phi'0.10, rho-0.5) done
+Part 3 low COV (c'0.25, phi'0.05) done
+Part 3 independent (rho 0) done
+Part 4 v1 uniform ranges (slides) 0.851 IV
+Part 4 v2 base 0.86 IV
+Part 4 v2 rho(c',phi') = 0 0.854 IV
+Part 4 v2 rho(c',phi') = -0.7 0.862 IV
+Part 4 v2 COV x 0.5 0.872 IV
+Part 4 v2 COV x 1.5 0.85 IV
+Part 4 v2 root cohesion x 0.4 (lower-bound sensitivity) 0.927 IV
+Part 5 0.7595788571742098 0.453376
+written /home/user/MonteCarloSimulationRisk/results/audit
+DONE 0
