@@ -301,7 +301,7 @@ def part4_assumptions():
         "v2 rho(c',phi') = -0.7": v2(rho=-0.7),
         "v2 COV x 0.5": v2(cov_scale=0.5),
         "v2 COV x 1.5": v2(cov_scale=1.5),
-        "v2 root cohesion x 0.4 (Wu-Waldron correction)": v2(root_scale=0.4),
+        "v2 root cohesion x 0.4 (lower-bound sensitivity)": v2(root_scale=0.4),
     }
     rows = []
     for name, sampler in variants.items():

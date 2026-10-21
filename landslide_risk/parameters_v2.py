@@ -9,14 +9,19 @@ Perbedaan dengan v1 (config.py, rentang seragam):
        Ks  ~ lognormal (median, simpangan baku log10)
      Sumber COV: ISSMGE TC304 (2021) state-of-the-art review of inherent
      variability (doi:10.53243/R0001); Phoon & Kulhawy (1999).
-  2. Korelasi c'-phi' negatif (rho = -0.5) lewat Gaussian copula
-     (Lumb 1970: -0.37 s.d. -0.70; Cherubini: -0.61). Mengabaikan korelasi
-     ini membuat Pf terlalu besar (Hammah et al.: Pf 1.05% pada rho=0
-     vs 0.05% pada rho=-0.5).
+  2. Korelasi c'-phi' negatif (rho = -0.5) lewat Gaussian copula.
+     Nilai -0.5 adalah ASUMSI di dalam rentang literatur (mis. Cherubini
+     1997: -0.61); catatan: Lumb (1970) justru menyatakan c dan phi dapat
+     dianggap independen. Hammah et al. (2004): Pf 1.05% pada rho=0 vs
+     0.05% pada rho=-0.5 (lereng homogen, COV 10%, potongan +-3 sigma).
+     Audit menunjukkan rho 0 s.d. -0.7 hampir tidak mengubah hasil model ini.
   3. Hujan memakai CURAH HUJAN KUMULATIF kejadian (mm, 1-3 hari), bukan
-     intensitas per jam. Longsor di Jawa umumnya dipicu hujan kumulatif
-     300-600 mm; intensitas di atas Ks hanya menjadi limpasan.
-  4. Kohesi akar dari kompilasi Stevens et al. (2006) dan sumber lain.
+     intensitas per jam. Batas kelas 0-600 mm adalah ASUMSI proyek. Sebagai
+     pembanding: Hadmoko et al. (2017) melaporkan longsor dangkal di Jawa
+     terkait hujan anteseden 30 hari 300-600 mm (longsor dalam > 600 mm),
+     yaitu besaran yang berbeda dari hujan per kejadian.
+  4. Kohesi akar dari Stevens, Stead & Millard (2006) dan Schmidt et al.
+     (2001). Hutan alami (25.6-94.3 kPa) tidak tercakup di kelas 1.
 
 Skor (1-5) untuk geometri, MAT, hujan, seismik, vegetasi tetap memakai
 rentang seragam: skor adalah KELAS, jadi nilai sebenarnya bisa di mana saja
